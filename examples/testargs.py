@@ -45,7 +45,7 @@ def test_args():
 
     argparse.overwrite(  # Change default arguments values
         batch_size=1024,
-        last='abcd'
+        last='this has been overwritten',
     )
 
     argparse.parse_args()  # Parse the default command line

@@ -51,6 +51,8 @@ class ArgParser:
         self._key2group = {}  # Useless ?
         self._key2action = {}
 
+        self._overwritten = {}
+
     @staticmethod
     def regiser_args(group):
         """ Decorator which flag the function as adding new arguments to the parser
@@ -87,7 +89,7 @@ class ArgParser:
         `parse_args` will raise AttributeError if the argument given here
         don't exist
         """
-        # TODO
+        self._overwritten.update(kwargs)
 
     def parse_args(self, argv=None):
         """ This is where the command line is actually parsed
@@ -106,6 +108,14 @@ class ArgParser:
                 self._group2key[group_name].append(action.dest)
                 self._key2group[action.dest] = group_name
                 self._key2action[action.dest] = action
+                if action.dest in self._overwritten:
+                    action.default = self._overwritten[action.dest]
+                    del self._overwritten[action.dest]  # Default overwritten
+
+        if len(self._overwritten):
+            raise AttributeError('Unkwnown argparse overwritten key: {}'.format(
+                list(self._overwritten.keys())[0])
+            )
 
         # Parse the given args
         self.args = self.parser.parse_args(argv)
