@@ -16,6 +16,9 @@
 """ File system management utilities
 """
 
+import os
+import collections
+
 
 def get_filelist(dirname, ext=None):
     """ Return all files in a directory sorted
@@ -42,3 +45,11 @@ def get_filelist(dirname, ext=None):
         raise ValueError('{} does not contains any valid images'.format(dirname))
 
     return filenames
+
+
+def rstrip(s, suffix):
+    """ Return the given string without the suffix at the end
+    """
+    if s and s.endswith(suffix):
+        return s[:-len(suffix)]
+    return s
