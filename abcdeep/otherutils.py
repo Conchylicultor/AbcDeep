@@ -16,6 +16,7 @@
 """ Other utilities. Contains:
  * tqdm_redirect: utility to redirect print to tqdm.write
  * OrderedAttr: keep track of the attribute declaration order in ._attr_values
+ * cprint and TermMsg: collored version of print
 """
 
 import sys
@@ -27,7 +28,7 @@ import tqdm
 # TODO: Utility to add color in terminal
 
 
-__all__ = ['tqdm_redirect', 'OrderedAttr']
+__all__ = ['tqdm_redirect', 'OrderedAttr', 'cprint', 'TermMsg']
 
 
 class TqdmFile:
@@ -101,3 +102,54 @@ class OrderedAttr(metaclass=OrderedAttrMeta):
         if not hasattr(self, name):
             self._attr_values.append(value)
         return super().__setattr__(name, value)
+
+
+class TermColorMsg:
+    """ Enumerate ASCII color messages
+    """
+    TXT_BLACK = '\033[30m'
+    TXT_RED = '\033[31m'
+    TXT_GREEN = '\033[32m'
+    TXT_YELLOW = '\033[33m'  # The 93m values gives other color
+    TXT_BLUE = '\033[34m'
+    TXT_PINK = '\033[35m'
+    TXT_CYAN = '\033[36m'
+    TXT_WHITE = '\033[37m'
+
+    BG_RED = '\033[41m'
+    BG_GREEN = '\033[42m'
+    BG_YELLOW = '\033[43m'
+    BG_BLUE = '\033[44m'
+    BG_PINK = '\033[45m'
+    BG_CYAN = '\033[46m'
+    BG_WHITE = '\033[47m'
+
+    BOLD = '\033[1m'
+    ITALIC = '\033[3m'
+    UNDERLINE = '\033[4m'
+
+    END = '\033[0m'
+
+
+class TermMsg:
+    """ Color messages, sementic version
+    """
+    H1 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_WHITE
+    H2 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_CYAN
+    H3 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_PINK
+    STRONG = TermColorMsg.BOLD
+    EM = TermColorMsg.ITALIC
+    SUCCESS = TermColorMsg.TXT_GREEN
+    FAIL = TermColorMsg.BOLD + TermColorMsg.TXT_RED
+    WARNING = TermColorMsg.TXT_BLACK + TermColorMsg.BG_YELLOW
+
+
+def cprint(*arg, color=None, **kwargs):
+    """ Print the given arguments with the given color
+    """
+    assert color is not None
+    # end = kwargs.get('end', None)  # TODO: Allow to choose the end
+    print(color, end='')
+    print(*arg, **kwargs, end='')
+    print(TermColorMsg.END, end='')
+    print()

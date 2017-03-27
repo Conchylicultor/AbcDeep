@@ -189,7 +189,7 @@ class ArgParser:
 
 
 class ArgDefault:
-    """ Define the usuals arguments
+    """ Define the usuals arguments for machine learning research programs
     """
 
     @staticmethod
