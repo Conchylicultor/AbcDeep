@@ -110,7 +110,7 @@ class TermColorMsg:
     TXT_BLACK = '\033[30m'
     TXT_RED = '\033[31m'
     TXT_GREEN = '\033[32m'
-    TXT_YELLOW = '\033[33m'  # The 93m values gives other color
+    TXT_YELLOW = '\033[33m'
     TXT_BLUE = '\033[34m'
     TXT_PINK = '\033[35m'
     TXT_CYAN = '\033[36m'
@@ -123,6 +123,24 @@ class TermColorMsg:
     BG_PINK = '\033[45m'
     BG_CYAN = '\033[46m'
     BG_WHITE = '\033[47m'
+
+    # CGREY    = '\33[90m'
+    # CRED2    = '\33[91m'
+    # CGREEN2  = '\33[92m'
+    # CYELLOW2 = '\33[93m'
+    # CBLUE2   = '\33[94m'
+    # CVIOLET2 = '\33[95m'
+    # CBEIGE2  = '\33[96m'
+    # CWHITE2  = '\33[97m'
+    #
+    # CGREYBG    = '\33[100m'
+    # CREDBG2    = '\33[101m'
+    # CGREENBG2  = '\33[102m'
+    # CYELLOWBG2 = '\33[103m'
+    # CBLUEBG2   = '\33[104m'
+    # CVIOLETBG2 = '\33[105m'
+    # CBEIGEBG2  = '\33[106m'
+    # CWHITEBG2  = '\33[107m'
 
     BOLD = '\033[1m'
     ITALIC = '\033[3m'
@@ -147,9 +165,11 @@ class TermMsg:
 def cprint(*arg, color=None, **kwargs):
     """ Print the given arguments with the given color
     """
-    assert color is not None
-    # end = kwargs.get('end', None)  # TODO: Allow to choose the end
-    print(color, end='')
-    print(*arg, **kwargs, end='')
-    print(TermColorMsg.END, end='')
-    print()
+    if color is None:
+        print(*arg, **kwargs)
+    else:
+        # end = kwargs.get('end', None)  # TODO: Allow to choose the end
+        print(color, end='')
+        print(*arg, **kwargs, end='')
+        print(TermColorMsg.END, end='')
+        print()

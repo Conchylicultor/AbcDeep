@@ -17,10 +17,12 @@
 The other classes can easily add new arguments to the default ones
 """
 
+import sys
 import collections
 import argparse
 
 import abcdeep.otherutils as otherutils
+from abcdeep.otherutils import cprint, TermMsg
 
 
 # TODO: Allow the default argument values to be customized by the programs. Sol:
@@ -40,7 +42,7 @@ class ArgParser:
     FCT_FLAG = '_arg_flag'
 
     def __init__(self):
-        self.parser = argparse.ArgumentParser()
+        self.parser = argparse.ArgumentParser()  # TODO: Allow to use add_subparsers
         self.args = None
 
         # Correspondance structures
@@ -51,7 +53,8 @@ class ArgParser:
         self._key2group = {}  # Useless ?
         self._key2action = {}
 
-        self._overwritten = {}
+        self._overwritten = {}  # Argument modified by overwrite()
+        self._given = set()  # Argument passed by the command line
 
     @staticmethod
     def regiser_args(group):
@@ -120,6 +123,16 @@ class ArgParser:
         # Parse the given args
         self.args = self.parser.parse_args(argv)
 
+        # Save the given arguments (TODO: Is there a better way to extract the args ?)
+        if argv is None:
+            argv = sys.argv
+
+        def filter_arg(a):  # TODO: Support for other prefix_char
+            return a.startswith('--')
+
+        for a in filter(filter_arg, argv):
+            self._given.add(a.lstrip('-'))
+
         # TODO: Also save which args have been modified from default values (check after ?)
 
         return self.args
@@ -157,6 +170,9 @@ class ArgParser:
                     print('Warning: Could not restore param <{}/{}>. Ignoring...'.format(group_name,key))
                     continue
 
+                if key in self._given:  # The command lines arguments overwrite the given ones
+                    continue
+
                 # TODO: This code is critical so should be more carefully
                 # tested (should also assert that the infered type correspond
                 # to the expected one)
@@ -177,14 +193,14 @@ class ArgParser:
         Need to be called after `parse_args`
         """
         values = vars(self.args)
-        print('############### Parameters ###############')
+        cprint('############### Parameters ###############', color=TermMsg.H1)
         for group_title, actions in self._group2key.items():
             if not actions:  # Skip positional and optional arguments
                 continue
-            print('[{}]'.format(group_title))
+            cprint('[{}]'.format(group_title), color=TermMsg.H2)
             for a in actions:
-                # TODO: Format or highlight parameters which are not the defaults ones
-                print('{}: {}'.format(a, values[a]))
+                color = TermMsg.STRONG if a in self._given else None
+                cprint('{}: {}'.format(a, values[a]), color=color)
             print()
 
 

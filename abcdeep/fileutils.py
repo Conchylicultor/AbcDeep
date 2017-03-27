@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-""" File system management utilities
+""" File system management and string utilities
 """
 
 import os
