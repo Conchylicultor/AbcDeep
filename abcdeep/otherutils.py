@@ -107,46 +107,48 @@ class OrderedAttr(metaclass=OrderedAttrMeta):
 class TermColorMsg:
     """ Enumerate ASCII color messages
     """
+    END = '\033[0m'
+    BOLD = '\033[1m'
+    ITALIC = '\033[3m'
+    UNDERLINE = '\033[4m'
+    BLINK = '\033[5m'
+    SELECTED = '\033[7m'  # Text and background color inverted
+
     TXT_BLACK = '\033[30m'
     TXT_RED = '\033[31m'
     TXT_GREEN = '\033[32m'
     TXT_YELLOW = '\033[33m'
     TXT_BLUE = '\033[34m'
-    TXT_PINK = '\033[35m'
+    TXT_MAGENTA = '\033[35m'
     TXT_CYAN = '\033[36m'
     TXT_WHITE = '\033[37m'
 
+    TXT_GREY    = '\033[90m'
+    TXT_RED2    = '\033[91m'
+    TXT_GREEN2  = '\033[92m'
+    TXT_YELLOW2 = '\033[93m'
+    TXT_BLUE2   = '\033[94m'
+    TXT_MAGENTA2 = '\033[95m'
+    TXT_CYAN2  = '\033[96m'
+    TXT_WHITE2  = '\033[97m'
+
+    BG_BLACK = '\033[40m'
     BG_RED = '\033[41m'
     BG_GREEN = '\033[42m'
     BG_YELLOW = '\033[43m'
     BG_BLUE = '\033[44m'
-    BG_PINK = '\033[45m'
+    BG_MAGENTA = '\033[45m'
     BG_CYAN = '\033[46m'
     BG_WHITE = '\033[47m'
 
-    # CGREY    = '\33[90m'
-    # CRED2    = '\33[91m'
-    # CGREEN2  = '\33[92m'
-    # CYELLOW2 = '\33[93m'
-    # CBLUE2   = '\33[94m'
-    # CVIOLET2 = '\33[95m'
-    # CBEIGE2  = '\33[96m'
-    # CWHITE2  = '\33[97m'
-    #
-    # CGREYBG    = '\33[100m'
-    # CREDBG2    = '\33[101m'
-    # CGREENBG2  = '\33[102m'
-    # CYELLOWBG2 = '\33[103m'
-    # CBLUEBG2   = '\33[104m'
-    # CVIOLETBG2 = '\33[105m'
-    # CBEIGEBG2  = '\33[106m'
-    # CWHITEBG2  = '\33[107m'
-
-    BOLD = '\033[1m'
-    ITALIC = '\033[3m'
-    UNDERLINE = '\033[4m'
-
-    END = '\033[0m'
+    BG_GREY    = '\033[100m'
+    BG_RED2    = '\033[101m'
+    BG_GREEN2  = '\033[102m'
+    BG_YELLOW2 = '\033[103m'
+    BG_BLUE2   = '\033[104m'
+    BG_MAGENTA2 = '\033[105m'
+    BG_CYAN2  = '\033[106m'
+    BG_WHITE2  = '\033[107m'
 
 
 class TermMsg:
@@ -154,7 +156,7 @@ class TermMsg:
     """
     H1 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_WHITE
     H2 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_CYAN
-    H3 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_PINK
+    H3 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_MAGENTA
     STRONG = TermColorMsg.BOLD
     EM = TermColorMsg.ITALIC
     SUCCESS = TermColorMsg.TXT_GREEN
