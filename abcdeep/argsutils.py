@@ -18,6 +18,7 @@ The other classes can easily add new arguments to the default ones
 """
 
 import sys
+import ast  # For literal eval
 import collections
 import argparse
 

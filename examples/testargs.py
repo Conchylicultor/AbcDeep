@@ -16,7 +16,12 @@
 """ Demonstration of the argparse extention
 """
 
+import os
+import configparser
+
 from abcdeep.argsutils import ArgParser, ArgGroup, ArgDefault
+from abcdeep.otherutils import cprint, TermMsg
+
 
 class OtherArgs:
     @staticmethod
@@ -30,6 +35,7 @@ class OtherArgs:
     def custom_args(parser):
         parser.add_argument('--first', type=str, default=None, help='First arg')
         parser.add_argument('--last', type=str, default=None, help='Last arg')
+        parser.add_argument('--choices', type=str, choices=['C1', 'C2', 'C3'], default='C2', help='Last arg')
 
     @staticmethod
     @ArgParser.regiser_args(ArgGroup.GLOBAL)
@@ -37,7 +43,7 @@ class OtherArgs:
         parser.add_argument('--mode', choices=[1, 2, 3], default=None, help='First arg')
 
 
-def test_args():
+def create_argparser():
     argparse = ArgParser()  # Create the parser
 
     argparse.register_cls(ArgDefault)  # Add some arguments
@@ -48,6 +54,33 @@ def test_args():
         last='this has been overwritten',
     )
 
-    argparse.parse_args()  # Parse the default command line
+    return argparse
 
-    argparse.print_args()
+
+def test_args():
+    argparse1 = create_argparser()
+    argparse1.parse_args()  # Parse the default command line
+    argparse1.print_args()
+
+    config_name = 'examples/config.ini'  # TODO: Dynamically compute the path
+
+    # Saving args
+    cprint('WARNING: Saving args...', color=TermMsg.WARNING)
+    config = configparser.ConfigParser()
+    argparse1.save_args(config)
+    with open(config_name, 'w') as config_file:
+        config.write(config_file)
+    with open(config_name) as f:
+        print(f.read())
+
+    # Restoring args
+    argparse2 = create_argparser()
+    argparse2.parse_args(['--batch_size', '256'])  # Manually overwrite default arguments
+
+    cprint('WARNING: Restoring args...', color=TermMsg.WARNING)
+    config = configparser.ConfigParser()
+    config.read(config_name)
+    argparse2.restore_args(config)
+    argparse2.print_args()
+
+    os.remove(config_name)  # Cleanup
