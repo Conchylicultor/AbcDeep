@@ -17,11 +17,13 @@
 
 import examples.testargs
 import examples.testcolors
+import examples.testmnist
 
 
 # TODO: Use abcdeep.ArgParser to choose which demo run
 
 
 if __name__ == '__main__':
-    examples.testcolors.test_colors()
-    examples.testargs.test_args()
+    #examples.testcolors.test_colors()
+    #examples.testargs.test_args()
+    examples.testmnist.test_mnist()

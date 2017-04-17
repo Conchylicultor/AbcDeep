@@ -93,15 +93,39 @@ class OrderedAttrMeta(type):
 
 
 class OrderedAttr(metaclass=OrderedAttrMeta):
-    """ Convinience class to hidde the metaclass
+    """ Convinience class to hide the metaclass
     """
-    def __setattr__(self, name, value):  # TODO: Useless ?
+    def __setattr__(self, name, value):  # TODO: Useless ? Should also update when delete
         """ Called when a new attribute is added.
         Update the ordered keys
         """
         if not hasattr(self, name):
             self._attr_values.append(value)
         return super().__setattr__(name, value)
+
+    @classmethod
+    def arg_choices(cls):
+        """ Helper function to generate the arguments for argparse
+        Is used with **. For example:
+
+            parser.add_argument(
+                '--mode',
+                **Mode.arg_choices(),
+                help='program mode'
+            )
+
+        Warning: Will only work if the class is an enum of string
+        """
+        return {
+            'choices': cls._attr_values,
+            'default': cls._attr_values[0],
+            'type': str,
+        }
+
+
+# TODO: Create a mapping class (enum to object, for instance:
+# InputType.MIDI -> 'midi' -> MidiConnector) ? Would allows easy conversions
+# between argparse choices and other objects
 
 
 class TermColorMsg:

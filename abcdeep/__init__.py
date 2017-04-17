@@ -14,3 +14,4 @@
 # ==============================================================================
 
 from abcdeep.otherutils import *
+from abcdeep.abcprogram import *

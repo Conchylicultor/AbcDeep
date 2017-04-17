@@ -26,8 +26,10 @@ import abcdeep.otherutils as otherutils
 from abcdeep.otherutils import cprint, TermMsg
 
 
-# TODO: Allow the default argument values to be customized by the programs. Sol:
-# create class which on the constructor takes default arguments
+# TODO: Create new class allowing to add subprograms (with .add_subparsers). Should
+# allow to define a default subparser to use if no subprogram is defined. This
+# can be done using the dest argument of add_subparsers and test it after the
+# parse_args call (pb is that default help won't be printed)
 
 
 class ArgGroup(otherutils.OrderedAttr):
@@ -76,8 +78,12 @@ class ArgParser:
         Args:
             cls: The class to parse
         """
+        def gen_members(cls):  # Return also members in parent classes
+            for c in reversed(cls.__mro__):
+                for v in vars(c):
+                    yield v
 
-        for fct in [getattr(cls, v) for v in vars(cls)]:
+        for fct in [getattr(cls, v) for v in gen_members(cls)]:
             if hasattr(fct, ArgParser.FCT_FLAG):
                 group_name = getattr(fct, ArgParser.FCT_FLAG)
                 # Create the group if not exist
@@ -205,7 +211,7 @@ class ArgParser:
             print()
 
 
-class ArgDefault:
+class ArgDefault:  # TODO: Delete and dispatch among all modules
     """ Define the usuals arguments for machine learning research programs
     """
 

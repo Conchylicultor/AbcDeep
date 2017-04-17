@@ -24,7 +24,7 @@ def get_filelist(dirname, ext=None):
     """ Return all files in a directory sorted
     Args:
         dirname (str)
-        ext (str or list[str]): the file extentions to keep
+        ext (str or list[str]): the file extentions to keep (None for all)
     Return:
         list[str]: the filenames (don't contains the dirname)
     Raise:
