@@ -15,20 +15,19 @@
 
 """ Other utilities. Contains:
  * tqdm_redirect: utility to redirect print to tqdm.write
+ * interrupt_handler: Context manager to capture signal.SIGINT
  * OrderedAttr: keep track of the attribute declaration order in ._attr_values
  * cprint and TermMsg: collored version of print
 """
 
 import sys
+import signal
 import contextlib
 import collections
 import tqdm
 
 
-# TODO: Utility to add color in terminal
-
-
-__all__ = ['tqdm_redirect', 'OrderedAttr', 'cprint', 'TermMsg']
+__all__ = ['tqdm_redirect', 'interrupt_handler', 'OrderedAttr', 'cprint', 'TermMsg']
 
 
 class TqdmFile:
@@ -69,6 +68,34 @@ def tqdm_redirect(*args, **kwargs):
         # dynamic_ncols must be set because of a bug from tqdm side
         for x in tqdm.tqdm(*args, **kwargs, file=f, dynamic_ncols=True):
             yield x
+
+
+@contextlib.contextmanager
+def interrupt_handler():
+    """ Context manager to capture the Ctr+C interruption
+    Usage:
+
+        with interrupt_handler() as h:
+            while True:
+                if h.interrupted:  # Ctrl+C pressed
+                    break
+    """
+    sig = signal.SIGINT
+    # TODO: Also capture SIGTERM (ex: when using pycharm) ?
+
+    class InterruptState:
+        def __init__(self):
+            self.interrupted = False
+
+        def handler(self, signum, frame):
+            self.interrupted = True
+
+    try:
+        state = InterruptState()
+        prev_handler = signal.signal(sig, state.handler)
+        yield state
+    finally:
+        signal.signal(sig, prev_handler)  # Restore original signal handler
 
 
 class OrderedAttrMeta(type):
@@ -176,7 +203,7 @@ class TermColorMsg:
 
 
 class TermMsg:
-    """ Color messages, sementic version
+    """ Color messages, semantic version
     """
     H1 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_WHITE
     H2 = TermColorMsg.TXT_BLACK + TermColorMsg.BG_CYAN

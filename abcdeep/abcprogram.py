@@ -19,6 +19,7 @@
 import tensorflow as tf
 
 import abcdeep
+import abcdeep.hook as hook
 from abcdeep.argsutils import ArgParser, ArgGroup
 
 
@@ -46,6 +47,15 @@ class DebugMode(abcdeep.OrderedAttr):
     FATAL = 'fatal'
 
 
+class AbortLoop(Exception):
+    """ Raised by the hooks to skip the current iteration
+    """
+
+
+class AbortProgram(Exception):
+    """ Raised by the hooks to end the program
+    """
+
 class AbcProgram:
 
     @staticmethod
@@ -59,7 +69,8 @@ class AbcProgram:
     #@abcdeep.abstract
     def _customize_args(self, arg_parser):
         """ Allows child classes to customize the argument parser
-        Is called after having registered all standard arguments
+        Can overrite default arguments and add new custom ones. Is called after
+        having registered all standard arguments.
         Args:
             arg_parser (ArgParser): The program ArgParser object
         """
@@ -70,7 +81,10 @@ class AbcProgram:
         """ This function is called to add the modes (training, testing,...).
         Is called after the argument parsing and model creation.
         """
-        # TODO: Call before or after model creation ?
+        # TODO: Pb: need the argument to build the hooks but the hooks need to
+        # register their arguments. Chicken-Egg problem. When adding an
+        # hyperparametter (learning rate, dropout,...) with a schedule using a
+        # hook, the same hook can be used multiple times but with different args.
         pass
 
     def __init__(self, program_info, model=None, dataconnector=None):
@@ -121,27 +135,31 @@ class AbcProgram:
     def main(self):
         """
         """
-        # TODO: Is it better to catch KeyboardInterrupt or to redirect signal with
-        # signal.signal(signal.SIGINT, signal_handler) ? Restore when end
         # TODO: Set mode/initial
 
         # TODO: Single Hook which encapsulate and control all hooks (run for good mode,
         # for good iteration, forward parameters (glob_step,...)) ?
 
+        interrupt_hook = hook.InterruptHook()
 
         with tf.train.MonitoredSession(
             session_creator=tf.train.ChiefSessionCreator(),
-            hooks=[saver_hook, summary_hook]) as sess:
+            hooks=[interrupt_hook],  #hooks=[saver_hook, summary_hook]
+        ) as sess:
 
-            while not sess.should_stop():
-                # TODO: Format output with tqdm (can probably be done using hook ?)
-                # TODO: Set current mode for the loop
-                try:
-                    sess.run(train_op)
-                except AbortLoop:  # Abort the current loop (ex: invalid input)
-                    pass
-                except AbortProgram:  # Abort program (TODO: Also when ctrl+C)
-                    sess.request_stop()
+            with abcdeep.interrupt_handler() as h:  # Capture Ctrl+C
+                interrupt_hook.interrupt_state = h
+
+                while not sess.should_stop():
+                    # TODO: Format output with tqdm (can probably be done using hook ?)
+                    # TODO: Set current mode for the loop
+                    sess.run([])  # Empty loop (the fetches are added by the hooks)
+                    #except AbortLoop:  # Abort the current loop (ex: invalid input)
+                    #    pass
+                    #except AbortProgram:  # Abort program
+                    #    sess.request_stop()
+
+        print('The End! Thank you for using our program.')
 
     def set_tf_verbosity(self):
         """ Set the debug mode for tensorflow

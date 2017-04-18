@@ -19,6 +19,24 @@
 import tensorflow as tf
 
 
+__all__ = ['InterruptHook']
+
+
+class InterruptHook(tf.train.SessionRunHook):
+    """ Stop the session when a SIGINT is captured
+    """
+    def __init__(self):
+        super().__init__()
+        # Singal handler state (InterruptState) from a interrupt_handler
+        # context manager
+        self.interrupt_state = None
+
+    def after_run(self, run_context, run_values):
+        if self.interrupt_state.interrupted:
+            print('Stop requested, exiting...')
+            run_context.request_stop()
+
+
 class AbcHook(tf.train.SessionRunHook):
     """ Base class for the hooks
     The hooks are similar to tf.train.SessionRunHook with some minor changes:
