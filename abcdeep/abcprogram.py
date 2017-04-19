@@ -16,11 +16,14 @@
 """ The main program with the taining loop
 """
 
+import os
+import configparser
 import tensorflow as tf
 
 import abcdeep
 import abcdeep.hook as hook
 from abcdeep.argsutils import ArgParser, ArgGroup
+from abcdeep.otherutils import cprint, TermMsg
 
 
 __all__ = ['ProgramInfo', 'AbcProgram']
@@ -63,6 +66,8 @@ class AbcProgram:
     def global_args(parser):
         """ Register the program arguments
         """
+        parser.add_argument('--models_dir', type=str, default=None, help='root folder in which the models are saved and loaded')
+        parser.add_argument('--model_tag', type=str, default=None, help='tag to differentiate which model to store/load')
         parser.add_argument('--reset', action='store_true', help='use this if you want to ignore the previous model present on the model directory (Warning: the model will be destroyed with all the folder content)')
         parser.add_argument('--debug_mode', **DebugMode.arg_choices(), help='verbosity of the tensorflow debug mode')
 
@@ -85,6 +90,8 @@ class AbcProgram:
         # register their arguments. Chicken-Egg problem. When adding an
         # hyperparametter (learning rate, dropout,...) with a schedule using a
         # hook, the same hook can be used multiple times but with different args.
+        # Sol: The modes and hooks are constructed initially before parse_args but
+        # can modify themselves aftewards (ex: when create_session is called)
         pass
 
     def __init__(self, program_info, model=None, dataconnector=None):
@@ -99,7 +106,16 @@ class AbcProgram:
         self.args = None
 
         self.model_cls = model
+        self.model = None
+        self.model_dir = ''
+
         self.dataconnector_cls = dataconnector
+        self.dataconnector = None
+
+        self.MODELS_DIR = 'save'
+        self.MODEL_DIR_PREFIX = 'model'
+        self.CONFIG_FILENAME = 'config.ini'
+
 
     def add_mode(self):
         pass
@@ -124,15 +140,22 @@ class AbcProgram:
         # TODO: Register all args from all added hooks
         self._customize_args(arg_parser)
         self.args = arg_parser.parse_args(args)
+
+        # Compute some global variables and save/restore the previous parameters
+        self._set_dirs()
+        if self.args.reset:
+            self._reset()
+        self._restore_args(arg_parser)
+        self._set_tf_verbosity()  # Set general debug mode
+
         arg_parser.print_args()
 
-        # Set general debug mode
-        self.set_tf_verbosity()
+        self.model = self.model_cls(self.args)  # Construct the model
 
         # Launch the associated mode
-        self.main()
+        self._main()
 
-    def main(self):
+    def _main(self):
         """
         """
         # TODO: Set mode/initial
@@ -159,9 +182,63 @@ class AbcProgram:
                     #except AbortProgram:  # Abort program
                     #    sess.request_stop()
 
-        print('The End! Thank you for using our program.')
+        print('The End! Thank you for using this program.')
 
-    def set_tf_verbosity(self):
+    def _set_dirs(self):
+        """ Compute the current paths for the model and data
+        By default, use location relative to the root directory:
+          * For model: save/model-<mode_tag>
+          * For data:
+        """
+        # Compute the current model path (Use the current working directory if
+        # None set)
+        default_model_dir = os.path.join(os.getcwd(), self.MODELS_DIR)
+        self.model_dir = self.args.models_dir or default_model_dir
+        self.model_dir = os.path.join(self.model_dir, self.MODEL_DIR_PREFIX)
+        if self.args.model_tag:
+            self.model_dir += '-' + self.args.model_tag
+
+        # Compute the data paths
+
+    def _reset(self):
+        """ Delete all the model dir content.
+
+        Warning: No confirmation is asked. All subfolders will be deleted
+        """
+        assert self.args.reset
+        if os.path.exists(self.model_dir):
+            cprint(
+                'Warning: Delete all content of {}'.format(self.model_dir),
+                color=TermMsg.WARNING
+            )
+            for root, dirs, files in os.walk(self.model_dir, topdown=False):
+                for name in files:
+                    file_path = os.path.join(root, name)
+                    print('Removing {}'.format(file_path))
+                    os.remove(file_path)
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+
+    def _restore_args(self, arg_parser):
+        """ Load the some values associated with the current model, like the
+        current glob_step value.
+        Is one of the first function called because it initialize some
+        variables used on the rest of the program.
+
+        Warning: If you modify this function, make sure to mirror the changes
+        in _save_args
+        """
+        # If there is a previous model, restore some parameters
+        config_name = os.path.join(self.model_dir, self.CONFIG_FILENAME)
+        if os.path.exists(config_name):
+            config = configparser.ConfigParser()
+            config.read(config_name)
+
+            # TODO: Check the program name/version ??
+
+            arg_parser.restore_args(config)
+
+    def _set_tf_verbosity(self):
         """ Set the debug mode for tensorflow
         """
         tf.logging.set_verbosity(

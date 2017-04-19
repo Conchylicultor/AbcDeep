@@ -7,5 +7,5 @@ To use the module, those *Abstract Base Classes* needs to be overloaded:
  * AbcDataManager: Dataset creation and loading
 
 The module require the following dependencies:
- * tensorflow (at least v12.0)
+ * tensorflow 1.0
  * tqdm

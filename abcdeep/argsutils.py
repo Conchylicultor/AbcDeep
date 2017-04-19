@@ -118,6 +118,7 @@ class ArgParser:
                 self._group2key[group_name].append(action.dest)
                 self._key2group[action.dest] = group_name
                 self._key2action[action.dest] = action
+                # The defaults arguments can be overwritten by .overwrite()
                 if action.dest in self._overwritten:
                     action.default = self._overwritten[action.dest]
                     del self._overwritten[action.dest]  # Default overwritten
@@ -163,7 +164,8 @@ class ArgParser:
     def restore_args(self, config):
         """
         If a value cannot be fetched (ex: a new argument has been added), the
-        default value will be used instead (None if not set)
+        default value will be used instead (None if not set).
+        The arguments passed with the command line are not restored but kept
         Args:
             config (obj): configparser object
         """
@@ -174,7 +176,10 @@ class ArgParser:
             for key in config[group_name]:
                 action = self._key2action.get(key, None)
                 if not action:  # Additionnal key is present (don't exist in argparse)
-                    print('Warning: Could not restore param <{}/{}>. Ignoring...'.format(group_name,key))
+                    cprint(
+                        'Warning: Could not restore param <{}/{}>. Ignoring...'.format(group_name,key),
+                        color=TermMsg.WARNING
+                    )
                     continue
 
                 if key in self._given:  # The command lines arguments overwrite the given ones

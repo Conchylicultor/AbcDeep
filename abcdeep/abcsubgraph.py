@@ -16,6 +16,10 @@
 """
 """
 
+import tensorflow as tf
+
+from abcdeep.hook import AbcHook
+
 
 # TODO: Does every SubGraph also are hooks (modify the graph when necessary) ?
 
@@ -44,8 +48,14 @@ class ModeSelector(SubGraph):
         pass
 
 
-class AbcModel(SubGraph):
-    pass
+class AbcModel(SubGraph, AbcHook):
+    """
+    A model is also a hook and can control which operations are executed on the
+    graph
+    """
+    # TODO: Use separate class ForwardHook, BackwardHook instead ?
+    def __init__(self, args):
+        self.args = args
 
 
 class AbcDataConnector(SubGraph, AbcHook):

@@ -22,6 +22,7 @@ import tensorflow.contrib.learn as learn
 import abcdeep
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.abcprogram import AbcProgram
+from abcdeep.abcsubgraph import AbcModel
 from abcdeep.constant import GraphMode, GraphKey
 
 
@@ -62,7 +63,7 @@ class MnistLoader():
         outputs = inputs.get_outputs()
 
 
-class Model():
+class Model(AbcModel):
     """ Define the network architecture as well as the optimizer
     """
     @staticmethod
