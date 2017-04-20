@@ -18,6 +18,7 @@
 
 import tensorflow as tf
 
+import abcdeep
 from abcdeep.hook import AbcHook
 
 
@@ -48,14 +49,12 @@ class ModeSelector(SubGraph):
         pass
 
 
-class AbcModel(SubGraph, AbcHook):
+class AbcModel(SubGraph, AbcHook):  # TODO: It's SubGraph which should inherit from AbcHook
     """
     A model is also a hook and can control which operations are executed on the
     graph
     """
     # TODO: Use separate class ForwardHook, BackwardHook instead ?
-    def __init__(self, args):
-        self.args = args
 
 
 class AbcDataConnector(SubGraph, AbcHook):

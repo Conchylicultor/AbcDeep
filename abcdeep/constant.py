@@ -62,3 +62,9 @@ class GraphKey:
         # TODO: Check that the key is used only once (avoid collisions)
         # TODO: Modify graph collections to save the key with the graph ? (restore the keys)
         # TODO: Scope the keys under the graph_scope (allow to have same key under different graphs)
+
+
+    @staticmethod
+    def get_key(key):
+        """
+        """

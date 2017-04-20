@@ -69,9 +69,17 @@ class Model(AbcModel):
     @staticmethod
     @ArgParser.regiser_args(ArgGroup.NETWORK)
     def model_args(parser):
-        pass
+        parser.add_argument('--nb_class', type=int, default=10, help='Output size, number of classes to predict')
 
-    def _build_network(self, input_img, args, p_train):
+    def __init__(self):
+        super().__init__()
+        W = tf.Variable(tf.truncated_normal([12, 2], dtype=tf.float32))
+        b = tf.Variable(tf.zeros([2], dtype=tf.float32))
+        #self._build_network()
+        #self._build_loss()
+        #self._build_optimizer()  # TODO: Only build if not training
+
+    def _build_network(self):
         with tf.name_scope('network'):  # TODO: Use decorator instead as
             # @abcdeep.scope() which would parse the _build_{name_scope} function
             # name ?
@@ -99,7 +107,7 @@ class Model(AbcModel):
                 rate=0.4,
                 training=GraphKey.get_key(GraphKey.IS_TRAIN)
             )
-            net = tf.layers.dense(inputs=net, units=10)
+            net = tf.layers.dense(inputs=net, units=self.state.args.nb_class)
             GraphKey.add_key(GraphKey.OUTPUT, net)
 
     def _build_loss(self):

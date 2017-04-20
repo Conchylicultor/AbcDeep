@@ -104,6 +104,7 @@ class AbcProgram:
         """
         self.program_info = program_info
         self.args = None
+        self.arg_parser = None
 
         self.model_cls = model
         self.model = None
@@ -111,6 +112,9 @@ class AbcProgram:
 
         self.dataconnector_cls = dataconnector
         self.dataconnector = None
+
+        self.hooks_cls = []
+        self.hook_state = None
 
         self.MODELS_DIR = 'save'
         self.MODEL_DIR_PREFIX = 'model'
@@ -121,7 +125,9 @@ class AbcProgram:
         pass
 
     def run(self, args=None):
-        """
+        """ Launch the program with the given arguments
+        Args:
+            args (List[str]): If None, will take the command line argument
         """
         # Global infos on the program
         print('Welcome to {} v{} !'.format(
@@ -132,25 +138,40 @@ class AbcProgram:
         print('TensorFlow detected: v{}'.format(tf.__version__))
         print()
 
+        # TODO: HACK: Hardcoded values
+        # TODO: Check the calling order (glob step should be called at the end)
+        self.hooks_cls = [
+            hook.InterruptHook,
+            hook.SaverHook,
+            self.model_cls,
+            hook.GlobStepCounterHook,
+            # hook.SummaryHook,
+        ]
+
         # Parse the command lines arguments
-        arg_parser = ArgParser()
-        arg_parser.register_cls(type(self))
-        arg_parser.register_cls(self.model_cls)
-        arg_parser.register_cls(self.dataconnector_cls)
-        # TODO: Register all args from all added hooks
-        self._customize_args(arg_parser)
-        self.args = arg_parser.parse_args(args)
+        self.arg_parser = ArgParser()
+        self.arg_parser.register_cls(type(self))
+        #self.arg_parser.register_cls(self.model_cls)
+        #self.arg_parser.register_cls(self.dataconnector_cls)
+        for h in self.hooks_cls:  # Register all args from all added hooks
+            # TODO: What if the same hook is added multiple times. How to handle
+            # args name collisions ?
+            self.arg_parser.register_cls(h)
+        self._customize_args(self.arg_parser)
+        self.args = self.arg_parser.parse_args(args)
 
         # Compute some global variables and save/restore the previous parameters
         self._set_dirs()
+        self.hook_state = hook.HookSharedState(self)  # Called before _restore but after _set_dirs
         if self.args.reset:
             self._reset()
-        self._restore_args(arg_parser)
+        self._restore_args()
         self._set_tf_verbosity()  # Set general debug mode
 
-        arg_parser.print_args()
+        self.arg_parser.print_args()
 
-        self.model = self.model_cls(self.args)  # Construct the model
+        ## Construct the model and dataconnector
+        #self.model = self.model_cls(self.args)
 
         # Launch the associated mode
         self._main()
@@ -163,24 +184,26 @@ class AbcProgram:
         # TODO: Single Hook which encapsulate and control all hooks (run for good mode,
         # for good iteration, forward parameters (glob_step,...)) ?
 
-        interrupt_hook = hook.InterruptHook()
+        hooks = []
+        for hook_cls in self.hooks_cls:
+            h = hook_cls()
+            h.state = self.hook_state
+            hooks.append(h)
 
         with tf.train.MonitoredSession(
             session_creator=tf.train.ChiefSessionCreator(),
-            hooks=[interrupt_hook],  #hooks=[saver_hook, summary_hook]
+            hooks=hooks
         ) as sess:
+            print('Session launched.')
 
-            with abcdeep.interrupt_handler() as h:  # Capture Ctrl+C
-                interrupt_hook.interrupt_state = h
-
-                while not sess.should_stop():
-                    # TODO: Format output with tqdm (can probably be done using hook ?)
-                    # TODO: Set current mode for the loop
-                    sess.run([])  # Empty loop (the fetches are added by the hooks)
-                    #except AbortLoop:  # Abort the current loop (ex: invalid input)
-                    #    pass
-                    #except AbortProgram:  # Abort program
-                    #    sess.request_stop()
+            while not sess.should_stop():
+                # TODO: Format output with tqdm (can probably be done using hook ?)
+                # TODO: Set current mode for the loop
+                sess.run([])  # Empty loop (the fetches are added by the hooks)
+                #except AbortLoop:  # Abort the current loop (ex: invalid input)
+                #    pass
+                #except AbortProgram:  # Abort program
+                #    sess.request_stop()
 
         print('The End! Thank you for using this program.')
 
@@ -219,7 +242,7 @@ class AbcProgram:
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
 
-    def _restore_args(self, arg_parser):
+    def _restore_args(self):
         """ Load the some values associated with the current model, like the
         current glob_step value.
         Is one of the first function called because it initialize some
@@ -231,12 +254,27 @@ class AbcProgram:
         # If there is a previous model, restore some parameters
         config_name = os.path.join(self.model_dir, self.CONFIG_FILENAME)
         if os.path.exists(config_name):
+            print('Warning: Restoring previous configuration from {}'.format(config_name))
             config = configparser.ConfigParser()
             config.read(config_name)
 
             # TODO: Check the program name/version ??
+            # TODO: Restore glob_step (and other hooks parameters)
+            self.hook_state.restore_args(config)
+            self.arg_parser.restore_args(config)
 
-            arg_parser.restore_args(config)
+    def _save_params(self):
+        """ Save the params of the model, like the current glob_step value
+        Warning: if you modify this function, make sure the changes mirror _restore_args
+        """
+        config = configparser.ConfigParser()
+        # TODO: Save the program name/version ??
+        self.hook_state.save_args(config)
+        self.arg_parser.save_args(config)
+
+        config_name = os.path.join(self.model_dir, self.CONFIG_FILENAME)
+        with open(config_name, 'w') as config_file:
+            config.write(config_file)
 
     def _set_tf_verbosity(self):
         """ Set the debug mode for tensorflow
