@@ -139,6 +139,8 @@ class SaverHook(AbcHook):
 
     def _save(self):
         print('Saving current model...')
+        if not os.path.exists(self.state.model_dir):
+            os.makedirs(self.state.model_dir, exist_ok=True)
         self.state.program._save_params()
         self.saver.save(self.sess, self._get_model_prefix())  # Put a limit size (ex: 3GB for the model_dir) ?
         print('Model saved.')
