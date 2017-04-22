@@ -107,11 +107,8 @@ class AbcProgram:
         self.arg_parser = None
 
         self.model_cls = model
-        self.model = None
         self.model_dir = ''
-
         self.dataconnector_cls = dataconnector
-        self.dataconnector = None
 
         self.hooks_cls = []
         self.hook_state = None
@@ -141,11 +138,13 @@ class AbcProgram:
         # TODO: HACK: Hardcoded values
         # TODO: Check the calling order (glob step should be called at the end)
         self.hooks_cls = [
-            hook.InterruptHook,
             hook.SaverHook,
+            hook.TrainPlaceholderHook,
+            self.dataconnector_cls,
             self.model_cls,
-            hook.GlobStepCounterHook,
             # hook.SummaryHook,
+            hook.GlobStepCounterHook,
+            hook.InterruptHook,
         ]
 
         # Parse the command lines arguments
@@ -170,9 +169,6 @@ class AbcProgram:
 
         self.arg_parser.print_args()
 
-        ## Construct the model and dataconnector
-        #self.model = self.model_cls(self.args)
-
         # Launch the associated mode
         self._main()
 
@@ -184,12 +180,13 @@ class AbcProgram:
         # TODO: Single Hook which encapsulate and control all hooks (run for good mode,
         # for good iteration, forward parameters (glob_step,...)) ?
 
+        print('Building graph...')
         hooks = []
         for hook_cls in self.hooks_cls:
-            h = hook_cls()
-            h.state = self.hook_state
+            h = hook_cls(self.hook_state)
             hooks.append(h)
 
+        print('Launching session...')
         with tf.train.MonitoredSession(
             session_creator=tf.train.ChiefSessionCreator(),
             hooks=hooks

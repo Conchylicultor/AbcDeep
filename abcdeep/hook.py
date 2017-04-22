@@ -25,6 +25,7 @@ import tensorflow as tf
 
 import abcdeep
 from abcdeep.argsutils import ArgParser, ArgGroup
+from abcdeep.constant import GraphMode, GraphKey
 
 
 __all__ = [
@@ -81,16 +82,16 @@ class AbcHook(tf.train.SessionRunHook):
       every x iterations, every x seconds)
     """
 
-    def __init__(self):
+    def __init__(self, state):
         super().__init__()
-        self.state = None  # Each hook share a common state object
+        self.state = state  # Each hook share a common state object
 
 
 class InterruptHook(AbcHook):
     """ Stop the session when a SIGINT is captured
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, state):
+        super().__init__(state)
         self.handler = None
         self.interrupt_state = None
 
@@ -130,8 +131,8 @@ class SaverHook(AbcHook):
         parser.add_argument('--save_every', type=int, default=1000, help='nb of mini-batch step before creating a model checkpoint')
         parser.add_argument('--keep_every', type=float, default=0.3, help='if this option is set, a saved model will be keep every x hours (can be a fraction) (Warning: make sure you have enough free disk space or increase save_every)')
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, state):
+        super().__init__(state)
         self.saver = None
         self.sess = None
 
@@ -201,6 +202,23 @@ class SaverHook(AbcHook):
         """ If training mode, perform an ultimate saving
         """
         self._save()
+
+
+class TrainPlaceholderHook(AbcHook):
+    """ Switch for the train/test mode
+    """
+    def __init__(self, state):
+        super().__init__(state)
+        self.p_is_train = tf.placeholder(tf.bool, shape=())
+        GraphKey.add_key(GraphKey.IS_TRAIN, self.p_is_train)
+
+    def before_run(self, run_context):
+        """
+        """
+
+    def after_run(self, run_context, run_values):
+        """
+        """
 
 
 class GlobStepCounterHook(AbcHook):

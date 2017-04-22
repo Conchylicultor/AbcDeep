@@ -16,6 +16,8 @@
 """ Define standard constants and parameters to define the graphs
 """
 
+# TODO: Move GraphKey to subgraph.py or rename constant.py => ... (Choose better name)
+
 
 class GraphMode:
     """ Define the usual modes for the model
@@ -49,6 +51,8 @@ class GraphKey:
     # Some hyperparameters
     LEARNING_RATE = 'learning_rate'
 
+    _KEYS = {}  # TODO: Avoid using global cst (Allow to use 2 same network simultaneously) ?
+
 
     @staticmethod
     def add_key(key, value):
@@ -59,7 +63,9 @@ class GraphKey:
         Raise:
             ValueError: if the given key has already been added previously
         """
-        # TODO: Check that the key is used only once (avoid collisions)
+        if key in GraphKey._KEYS:  # Check that the key is used only once (avoid collisions)
+            raise ValueError('Error: GraphKey {} already set previously'.format(key))
+        GraphKey._KEYS[key] = value
         # TODO: Modify graph collections to save the key with the graph ? (restore the keys)
         # TODO: Scope the keys under the graph_scope (allow to have same key under different graphs)
 
@@ -67,4 +73,7 @@ class GraphKey:
     @staticmethod
     def get_key(key):
         """
+        Args:
+            key (str):
         """
+        return GraphKey._KEYS[key]

@@ -22,14 +22,25 @@ import tensorflow.contrib.learn as learn
 import abcdeep
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.abcprogram import AbcProgram
-from abcdeep.abcsubgraph import AbcModel
+from abcdeep.abcsubgraph import AbcModel, AbcDataConnector
 from abcdeep.constant import GraphMode, GraphKey
 
 
-class MnistLoader():
+class MnistLoader(AbcDataConnector):
     """ Define the input queues for training/validation/testing
     """
-    def build_queue(self):
+    def __init__(self, state):
+        super().__init__(state)
+        self._build_graph()
+
+    def _build_graph(self):
+        # TODO: Use build_queue instead
+        p_image = tf.placeholder(tf.float32, shape=(None, 256, 256, 3))
+        p_target = tf.placeholder(tf.int32, shape=(None))
+        GraphKey.add_key(GraphKey.INPUT, p_image)
+        GraphKey.add_key(GraphKey.TARGET, p_target)
+
+    def _build_queue(self):
         mnist = learn.datasets.load_dataset('mnist')
 
         inputs = abcdeep.queue.InputQueues()
@@ -71,13 +82,21 @@ class Model(AbcModel):
     def model_args(parser):
         parser.add_argument('--nb_class', type=int, default=10, help='Output size, number of classes to predict')
 
-    def __init__(self):
-        super().__init__()
-        W = tf.Variable(tf.truncated_normal([12, 2], dtype=tf.float32))
-        b = tf.Variable(tf.zeros([2], dtype=tf.float32))
+    def __init__(self, state):
+        super().__init__(state)
+        self._build_temp()
         #self._build_network()
-        #self._build_loss()
-        #self._build_optimizer()  # TODO: Only build if not training
+        self._build_loss()
+        self._build_optimizer()  # TODO: Only build if not training
+
+    def _build_temp(self):  # TODO: Delete
+        out_size = self.state.args.nb_class
+        net = GraphKey.get_key(GraphKey.INPUT)
+        W = tf.Variable(tf.truncated_normal([12, out_size], dtype=tf.float32))
+        b = tf.Variable(tf.zeros([out_size], dtype=tf.float32))
+        net = b
+        GraphKey.add_key(GraphKey.OUTPUT, net)
+
 
     def _build_network(self):
         with tf.name_scope('network'):  # TODO: Use decorator instead as
@@ -126,7 +145,7 @@ class Model(AbcModel):
         with tf.name_scope('optimizer'):
             # Initialize the optimizer
             opt = tf.train.AdamOptimizer(
-                learning_rate=GraphKey.get_key(GraphKey.LEARNING_RATE),
+                learning_rate=0.001, # TODO: GraphKey.get_key(GraphKey.LEARNING_RATE),
                 beta1=0.9,
                 beta2=0.999,
                 epsilon=1e-08
@@ -173,9 +192,4 @@ class Program(AbcProgram):
 
 def test_mnist():
     program = Program()
-    #    dataloader=MnistLoader,
-    #    model=Model,
-    #    trainer=abcdeep.Trainer,
-    #    config=[],  # Also add saver/summary by default
-    #)
     program.run()
