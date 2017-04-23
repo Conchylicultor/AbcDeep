@@ -139,6 +139,7 @@ class AbcProgram:
         # TODO: Check the calling order (glob step should be called at the end)
         self.hooks_cls = [
             hook.SaverHook,
+            hook.GraphSummaryHook,
             hook.TrainPlaceholderHook,
             self.dataconnector_cls,
             self.model_cls,
@@ -188,7 +189,9 @@ class AbcProgram:
 
         print('Launching session...')
         with tf.train.MonitoredSession(
-            session_creator=tf.train.ChiefSessionCreator(),
+            session_creator=tf.train.ChiefSessionCreator(
+                scaffold=tf.train.Scaffold(),  # TODO: Replace by our custom events (Why is there 2 tf.report_uninitialized_variables ?)
+            ),
             hooks=hooks
         ) as sess:
             print('Session launched.')

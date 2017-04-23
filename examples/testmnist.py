@@ -29,14 +29,29 @@ from abcdeep.constant import GraphMode, GraphKey
 class MnistLoader(AbcDataConnector):
     """ Define the input queues for training/validation/testing
     """
+    @staticmethod
+    @ArgParser.regiser_args(ArgGroup.NETWORK)
+    def model_args(parser):
+        parser.add_argument('--img_size', type=int, default=28, help='Input size, height and width of the image')
+
     def __init__(self, state):
         super().__init__(state)
         self._build_graph()
 
     def _build_graph(self):
         # TODO: Use build_queue instead
-        p_image = tf.placeholder(tf.float32, shape=(None, 256, 256, 3))
-        p_target = tf.placeholder(tf.int32, shape=(None))
+        img_size = self.state.args.img_size
+
+        p_image = tf.placeholder(
+            tf.float32,
+            shape=(None, img_size, img_size, 3),
+            name='image',
+        )
+        p_target = tf.placeholder(
+            tf.int32,
+            shape=(None),
+            name='target',
+        )
         GraphKey.add_key(GraphKey.INPUT, p_image)
         GraphKey.add_key(GraphKey.TARGET, p_target)
 
@@ -84,8 +99,8 @@ class Model(AbcModel):
 
     def __init__(self, state):
         super().__init__(state)
-        self._build_temp()
-        #self._build_network()
+        #self._build_temp()
+        self._build_network()
         self._build_loss()
         self._build_optimizer()  # TODO: Only build if not training
 
@@ -99,7 +114,7 @@ class Model(AbcModel):
 
 
     def _build_network(self):
-        with tf.name_scope('network'):  # TODO: Use decorator instead as
+        with tf.variable_scope('network'):  # TODO: Use decorator instead as
             # @abcdeep.scope() which would parse the _build_{name_scope} function
             # name ?
             net = GraphKey.get_key(GraphKey.INPUT)

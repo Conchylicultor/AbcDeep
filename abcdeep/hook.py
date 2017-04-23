@@ -135,6 +135,7 @@ class SaverHook(AbcHook):
         super().__init__(state)
         self.saver = None
         self.sess = None
+        #self.init_op =
 
         self.MODEL_EXT = '.index'
 
@@ -170,6 +171,7 @@ class SaverHook(AbcHook):
             keep_checkpoint_every_n_hours=self.state.args.keep_every,
             # pad_step_number=True,  # Pad with 0 the global step
         )
+        #self.init_op = tf.
 
     def after_create_session(self, sess, coord):
         """ Restore the model or perform a global initialization
@@ -188,7 +190,17 @@ class SaverHook(AbcHook):
                 checkpoint,
             )
         else:
-            if os.path.isdir(self.state.model_dir) and os.listdir(self.state.model_dir):
+            def is_dir_empty(directory):
+                """ Return True if the directory contains files
+                """
+                if not os.path.isdir(directory):
+                    return True
+                for _, _, files in os.walk(directory):
+                    if files:
+                        return False
+                return True
+
+            if not is_dir_empty(self.state.model_dir):
                 raise ValueError('Model not found, but some files are presents. Use --reset to clean the directory')
 
             print('No model found. Initialising the model...')
@@ -204,12 +216,46 @@ class SaverHook(AbcHook):
         self._save()
 
 
+class GraphSummaryHook(AbcHook):
+    """ Save the graph architecture for TensorBoard
+    Is only executed once at the first iteratio.
+    """
+
+    def __init__(self, state):
+        super().__init__(state)
+        self.summary = None
+        self.save_dir = ''
+
+        self.SUMMARY_DIR = 'graph'
+        self.GRAPHDEF_FILENAME = 'graph.pbtxt'
+
+    def begin(self):
+        """
+        """
+        self.save_dir = os.path.join(self.state.model_dir, self.SUMMARY_DIR)
+        self.summary = tf.summary.FileWriter(self.save_dir)
+
+    def after_create_session(self, sess, coord):
+        """ Restore the model or perform a global initialization
+        """
+        if self.state.glob_step == 0:
+            # Check if files are already presents ?
+            tf.train.write_graph(
+                sess.graph_def,
+                self.save_dir,
+                self.GRAPHDEF_FILENAME,
+                as_text=True,
+            )
+            self.summary.add_graph(sess.graph)
+            # Also use .add_meta_graph ?? What difference ???
+
+
 class TrainPlaceholderHook(AbcHook):
     """ Switch for the train/test mode
     """
     def __init__(self, state):
         super().__init__(state)
-        self.p_is_train = tf.placeholder(tf.bool, shape=())
+        self.p_is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
         GraphKey.add_key(GraphKey.IS_TRAIN, self.p_is_train)
 
     def before_run(self, run_context):
