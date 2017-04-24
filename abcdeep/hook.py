@@ -21,6 +21,7 @@ The current hooks are:
 """
 
 import os
+import functools
 import tensorflow as tf
 
 import abcdeep
@@ -82,16 +83,28 @@ class AbcHook(tf.train.SessionRunHook):
       every x iterations, every x seconds)
     """
 
-    def __init__(self, state):
+    def __init__(self):
+        """
+        When this function is called, the arguments have not been parsed yet so
+        the constructor code should be moved inside _init instead
+        The function can be used eventually to add new arguments function for
+        the arg_parse
+        """
         super().__init__()
-        self.state = state  # Each hook share a common state object
+        self.state = None  # Each hook share a common state object
+
+    def _init(self, state):
+        """ Contructor of the hook
+        This function is called after the arguments have been parsed
+        """
+        self.state = state
 
 
 class InterruptHook(AbcHook):
     """ Stop the session when a SIGINT is captured
     """
-    def __init__(self, state):
-        super().__init__(state)
+    def _init(self, state):
+        super()._init(state)
         self.handler = None
         self.interrupt_state = None
 
@@ -125,14 +138,14 @@ class SaverHook(AbcHook):
 
     @staticmethod
     @ArgParser.regiser_args(ArgGroup.TRAINING)
-    def global_args(parser):
+    def training_args(parser):
         """ Register the program arguments
         """
         parser.add_argument('--save_every', type=int, default=1000, help='nb of mini-batch step before creating a model checkpoint')
         parser.add_argument('--keep_every', type=float, default=0.3, help='if this option is set, a saved model will be keep every x hours (can be a fraction) (Warning: make sure you have enough free disk space or increase save_every)')
 
-    def __init__(self, state):
-        super().__init__(state)
+    def _init(self, state):
+        super()._init(state)
         self.saver = None
         self.sess = None
         #self.init_op =
@@ -171,7 +184,7 @@ class SaverHook(AbcHook):
             keep_checkpoint_every_n_hours=self.state.args.keep_every,
             # pad_step_number=True,  # Pad with 0 the global step
         )
-        #self.init_op = tf.
+        #self.init_op = tf.global_variables_initializer()
 
     def after_create_session(self, sess, coord):
         """ Restore the model or perform a global initialization
@@ -221,8 +234,8 @@ class GraphSummaryHook(AbcHook):
     Is only executed once at the first iteratio.
     """
 
-    def __init__(self, state):
-        super().__init__(state)
+    def _init(self, state):
+        super()._init(state)
         self.summary = None
         self.save_dir = ''
 
@@ -253,8 +266,8 @@ class GraphSummaryHook(AbcHook):
 class TrainPlaceholderHook(AbcHook):
     """ Switch for the train/test mode
     """
-    def __init__(self, state):
-        super().__init__(state)
+    def _init(self, state):
+        super()._init(state)
         self.p_is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
         GraphKey.add_key(GraphKey.IS_TRAIN, self.p_is_train)
 
@@ -285,3 +298,49 @@ class PrintLossHook(AbcHook):
 
     def after_run(self, run_context, run_values):
         print('Loss (iter {}): {} ()')
+
+
+class HyperParamSchedulerHook(AbcHook):
+    """ Control a hyperparameter schedule
+    """
+    def __init__(self, name, default):
+        """
+        """
+        super().__init__()
+
+        self.name = name
+        self.p_param = None
+
+        # TODO: Improve function (more parameters, more choice, default
+        # scheduler, different param for test,...)!
+
+        @ArgParser.regiser_args(ArgGroup.TRAINING)
+        def training_args(parser, name, default):
+            """ Register the program arguments
+            """
+            parser.add_argument(
+                '--{}'.format(name),
+                type=float,
+                default=default,
+                help='control the {} parameter'.format(name),
+            )
+        training_args = functools.wraps(training_args)(
+            functools.partial(
+                training_args,
+                name=name,
+                default=default,
+            )
+        )
+
+        setattr(  # TODO: The class will be parsed twice (modify arg_parse to flag the methods aldready parsed ?)
+            HyperParamSchedulerHook,
+            '{}_args'.format(name),
+            staticmethod(training_args),
+        )
+
+    def _init(self, state):
+        """
+        """
+        super()._init(state)
+        self.p_param = tf.placeholder(tf.float32, shape=(), name=self.name)
+        GraphKey.add_key(self.name, self.p_param)  # TODO: Better collision name handing (create custom methods ??)

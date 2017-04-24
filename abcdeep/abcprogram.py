@@ -110,7 +110,7 @@ class AbcProgram:
         self.model_dir = ''
         self.dataconnector_cls = dataconnector
 
-        self.hooks_cls = []
+        self.hooks = []
         self.hook_state = None
 
         self.MODELS_DIR = 'save'
@@ -137,15 +137,17 @@ class AbcProgram:
 
         # TODO: HACK: Hardcoded values
         # TODO: Check the calling order (glob step should be called at the end)
-        self.hooks_cls = [
-            hook.SaverHook,
-            hook.GraphSummaryHook,
-            hook.TrainPlaceholderHook,
-            self.dataconnector_cls,
-            self.model_cls,
-            # hook.SummaryHook,
-            hook.GlobStepCounterHook,
-            hook.InterruptHook,
+        self.hooks = [
+            hook.SaverHook(),
+            hook.GraphSummaryHook(),
+            hook.TrainPlaceholderHook(),  # First hyperparameters
+            hook.HyperParamSchedulerHook(GraphKey.LEARNING_RATE, 0.001),
+            # hook.HyperParamSchedulerHook(GraphKey.DROPOUT, 0.8),
+            self.dataconnector_cls(),  # Then input connector
+            self.model_cls(),  # Finally the main model
+            # hook.SummaryHook(),
+            hook.GlobStepCounterHook(),
+            hook.InterruptHook(),
         ]
 
         # Parse the command lines arguments
@@ -153,10 +155,10 @@ class AbcProgram:
         self.arg_parser.register_cls(type(self))
         #self.arg_parser.register_cls(self.model_cls)
         #self.arg_parser.register_cls(self.dataconnector_cls)
-        for h in self.hooks_cls:  # Register all args from all added hooks
+        for h in self.hooks:  # Register all args from all added hooks
             # TODO: What if the same hook is added multiple times. How to handle
             # args name collisions ?
-            self.arg_parser.register_cls(h)
+            self.arg_parser.register_cls(type(h))  # TODO: Register instance instead of type
         self._customize_args(self.arg_parser)
         self.args = self.arg_parser.parse_args(args)
 
@@ -182,17 +184,15 @@ class AbcProgram:
         # for good iteration, forward parameters (glob_step,...)) ?
 
         print('Building graph...')
-        hooks = []
-        for hook_cls in self.hooks_cls:
-            h = hook_cls(self.hook_state)
-            hooks.append(h)
+        for hook in self.hooks:
+            h = hook._init(self.hook_state)
 
         print('Launching session...')
         with tf.train.MonitoredSession(
             session_creator=tf.train.ChiefSessionCreator(
                 scaffold=tf.train.Scaffold(),  # TODO: Replace by our custom events (Why is there 2 tf.report_uninitialized_variables ?)
             ),
-            hooks=hooks
+            hooks=self.hooks
         ) as sess:
             print('Session launched.')
 

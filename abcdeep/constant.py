@@ -50,6 +50,7 @@ class GraphKey:
 
     # Some hyperparameters
     LEARNING_RATE = 'learning_rate'
+    DROPOUT = 'dropout'
 
     _KEYS = {}  # TODO: Avoid using global cst (Allow to use 2 same network simultaneously) ?
 

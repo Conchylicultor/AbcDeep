@@ -79,7 +79,7 @@ class ArgParser:
             cls: The class to parse
         """
         def gen_members(cls):  # Return also members in parent classes
-            for c in reversed(cls.__mro__):
+            for c in reversed(cls.__mro__):  # TODO: If instance passed instead of class, also parse its non static methods
                 for v in vars(c):
                     yield v
 

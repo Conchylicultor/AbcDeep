@@ -34,8 +34,8 @@ class MnistLoader(AbcDataConnector):
     def model_args(parser):
         parser.add_argument('--img_size', type=int, default=28, help='Input size, height and width of the image')
 
-    def __init__(self, state):
-        super().__init__(state)
+    def _init(self, state):
+        super()._init(state)
         self._build_graph()
 
     def _build_graph(self):
@@ -97,8 +97,8 @@ class Model(AbcModel):
     def model_args(parser):
         parser.add_argument('--nb_class', type=int, default=10, help='Output size, number of classes to predict')
 
-    def __init__(self, state):
-        super().__init__(state)
+    def _init(self, state):
+        super()._init(state)
         #self._build_temp()
         self._build_network()
         self._build_loss()
@@ -160,7 +160,7 @@ class Model(AbcModel):
         with tf.name_scope('optimizer'):
             # Initialize the optimizer
             opt = tf.train.AdamOptimizer(
-                learning_rate=0.001, # TODO: GraphKey.get_key(GraphKey.LEARNING_RATE),
+                learning_rate=GraphKey.get_key(GraphKey.LEARNING_RATE),
                 beta1=0.9,
                 beta2=0.999,
                 epsilon=1e-08
