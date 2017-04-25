@@ -37,6 +37,7 @@ class GraphKey:
     """ Keys points in the graph for easy access to graph nodes
     """
     # TODO: Should separate the enum from the functions ?
+    # TODO: Should probably use the graph collections instead!
 
     INPUT = 'input'  # Formatted input batch (after pre-processing) of the network
     TARGET = 'target'  # Used for training and metrics utilisation

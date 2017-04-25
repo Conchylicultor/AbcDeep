@@ -17,11 +17,13 @@
 """
 
 import os
+import platform  # Print Python version
 import configparser
 import tensorflow as tf
 
 import abcdeep
 import abcdeep.hook as hook
+from abcdeep.constant import GraphKey
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.otherutils import cprint, TermMsg
 
@@ -132,21 +134,25 @@ class AbcProgram:
             self.program_info.version
         ))
         print()
-        print('TensorFlow detected: v{}'.format(tf.__version__))
+        print('Python v{} - TensorFlow v{} ({})'.format(
+            platform.python_version(),
+            tf.__version__,
+            platform.platform(),
+        ))
         print()
 
         # TODO: HACK: Hardcoded values
-        # TODO: Check the calling order (glob step should be called at the end)
+        # WARNING: Calling order is important (TODO: Doc for each hook which define what should be run after/before)
         self.hooks = [
-            hook.SaverHook(),
-            hook.GraphSummaryHook(),
             hook.TrainPlaceholderHook(),  # First hyperparameters
             hook.HyperParamSchedulerHook(GraphKey.LEARNING_RATE, 0.001),
             # hook.HyperParamSchedulerHook(GraphKey.DROPOUT, 0.8),
             self.dataconnector_cls(),  # Then input connector
             self.model_cls(),  # Finally the main model
             # hook.SummaryHook(),
-            hook.GlobStepCounterHook(),
+            hook.SaverHook(),  # Saver has to be last one to modify graph (for the saving/init ops)
+            hook.GraphSummaryHook(),  # Summary is after the saver (because of reset)
+            hook.GlobStepCounterHook(),  # glob step is called at the end
             hook.InterruptHook(),
         ]
 
@@ -190,7 +196,7 @@ class AbcProgram:
         print('Launching session...')
         with tf.train.MonitoredSession(
             session_creator=tf.train.ChiefSessionCreator(
-                scaffold=tf.train.Scaffold(),  # TODO: Replace by our custom events (Why is there 2 tf.report_uninitialized_variables ?)
+                scaffold=tf.train.Scaffold(),  # Scaffold.finalize will look at the collections to use the operators added by the hooks
             ),
             hooks=self.hooks
         ) as sess:

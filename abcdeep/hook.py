@@ -36,6 +36,8 @@ __all__ = [
     'GlobStepCounterHook',
 ]
 
+# TODO: Refactor into multiple files inside abcdeep/hook/
+
 
 class HookSharedState:
     """ Container for the variables shared amongs the hooks
@@ -131,6 +133,9 @@ class InterruptHook(AbcHook):
 
 class SaverHook(AbcHook):
     """ Manage the model
+    Will substitue itself to the default scafold by adding itself all saver and
+    init ops into the collections tf.GraphKeys.SAVERS and cie.
+    Should only be created once per graph.
     """
     # TODO: Also restore params (instead of program)
     # TODO: Also save extra information not contained in the graph (data ?,
@@ -146,9 +151,13 @@ class SaverHook(AbcHook):
 
     def _init(self, state):
         super()._init(state)
-        self.saver = None
         self.sess = None
-        #self.init_op =
+
+        self.saver = None
+        self.init_op = None
+        self.ready_for_local_init_op = None  # Once the global variables are initialized, initialized local ones
+        self.local_init_op = None
+        self.ready_op = None
 
         self.MODEL_EXT = '.index'
 
@@ -179,12 +188,37 @@ class SaverHook(AbcHook):
     def begin(self):
         """
         """
-        self.saver = tf.train.Saver(  # TODO: Add an option to delimit a max size ?
-            max_to_keep=10,
-            keep_checkpoint_every_n_hours=self.state.args.keep_every,
-            # pad_step_number=True,  # Pad with 0 the global step
-        )
-        #self.init_op = tf.global_variables_initializer()
+        with tf.name_scope('saver_hook'):
+            self.saver = tf.train.Saver(  # TODO: Add an option to delimit a max size ?
+                max_to_keep=10,
+                keep_checkpoint_every_n_hours=self.state.args.keep_every,
+                # pad_step_number=True,  # Pad with 0 the global step
+            )
+            self.init_op = tf.global_variables_initializer()
+            self.ready_for_local_init_op = tf.report_uninitialized_variables(
+                tf.global_variables(),
+                name='ready_for_local_init_op',
+            )
+            with tf.name_scope('local_init_op'):
+                self.local_init_op = tf.group(
+                    tf.local_variables_initializer(),
+                    tf.tables_initializer(),  # Why the orignal Scater code initialize tables_initializer here ?
+                )
+            self.ready_op = tf.report_uninitialized_variables()
+
+        # Necessary to overwrite the default tf.train.Scafold saver:
+        tf.add_to_collection(tf.GraphKeys.SAVERS, self.saver)
+        tf.add_to_collection(tf.GraphKeys.INIT_OP, self.init_op)
+        tf.add_to_collection(tf.GraphKeys.READY_FOR_LOCAL_INIT_OP, self.ready_for_local_init_op)
+        tf.add_to_collection(tf.GraphKeys.LOCAL_INIT_OP, self.local_init_op)
+        tf.add_to_collection(tf.GraphKeys.READY_OP, self.ready_op)
+        # TODO: Is there more differences with original saver ??
+        #  * Diff with Saver ?
+        #  * local_init_op: Why tables_initializer ?
+        #  * ready_op: Why report_uninitialized_variables(),
+        #  report_uninitialized_resources()  why both variable/ressources ? What
+        #  are tensorflow.python.ops.resources ?
+        # TODO: Explore the content of GraphKeys.RESOURCES and GraphKeys.LOCAL_RESOURCES
 
     def after_create_session(self, sess, coord):
         """ Restore the model or perform a global initialization
