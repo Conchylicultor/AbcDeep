@@ -16,6 +16,7 @@
 """ Simple digit classification with CNN
 """
 
+import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.learn as learn
 
@@ -41,10 +42,11 @@ class MnistLoader(AbcDataConnector):
     def _build_graph(self):
         # TODO: Use build_queue instead
         img_size = self.state.args.img_size
+        self.s_image4d = (None, img_size, img_size, 3)
 
         p_image = tf.placeholder(
             tf.float32,
-            shape=(None, img_size, img_size, 3),
+            shape=self.s_image4d,
             name='image',
         )
         p_target = tf.placeholder(
@@ -87,6 +89,14 @@ class MnistLoader(AbcDataConnector):
         )
 
         outputs = inputs.get_outputs()
+
+    def before_run(self, run_context):
+        """
+        """
+        return tf.train.SessionRunArgs(None, feed_dict={
+            GraphKey.get_key(GraphKey.INPUT): np.zeros((1,) + self.s_image4d[1:]),
+            GraphKey.get_key(GraphKey.TARGET): [0],
+        })
 
 
 class Model(AbcModel):
@@ -172,6 +182,14 @@ class Model(AbcModel):
             with tf.control_dependencies(update_ops):
                 op_opt = opt.minimize(GraphKey.get_key(GraphKey.LOSS))
                 GraphKey.add_key(GraphKey.OPTIMIZER, op_opt)
+
+    def before_run(self, run_context):
+        """
+        """
+        # TODO: Could have a hook which automatically run a train step if training mode
+        return tf.train.SessionRunArgs(
+            fetches={GraphKey.OPTIMIZER: GraphKey.get_key(GraphKey.OPTIMIZER)},
+        )
 
 
 class Program(AbcProgram):

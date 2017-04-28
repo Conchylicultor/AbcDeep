@@ -27,7 +27,7 @@ import collections
 import tqdm
 
 
-__all__ = ['tqdm_redirect', 'interrupt_handler', 'OrderedAttr', 'cprint', 'TermMsg']
+__all__ = ['tqdm_redirect', 'tqdm_redirector', 'interrupt_handler', 'OrderedAttr', 'cprint', 'TermMsg']
 
 
 class TqdmFile:
@@ -39,7 +39,7 @@ class TqdmFile:
     def write(self, x):
         # Avoid print() second call (useless \n)
         if len(x.rstrip()) > 0:
-            tqdm.write(x, file=self.file)
+            tqdm.tqdm.write(x, file=self.file)
 
 
 @contextlib.contextmanager
@@ -68,6 +68,21 @@ def tqdm_redirect(*args, **kwargs):
         # dynamic_ncols must be set because of a bug from tqdm side
         for x in tqdm.tqdm(*args, **kwargs, file=f, dynamic_ncols=True):
             yield x
+
+
+def tqdm_redirector(*args, **kwargs):
+    """ Convinience wrapper to redirect stdout to tqdm.
+    Yield the tqdm object the first time the function is called to allow custom
+    control over it.
+    Close the tqdm object the second time the function is called
+    """
+    # TODO: Replace this function by an object which generate tqdm objects on
+    # the fly. Every time a new object is created, the previous one is closed
+    with redirect_to_tqdm() as f:
+        # dynamic_ncols must be set because of a bug from tqdm side
+        t = tqdm.tqdm(*args, **kwargs, file=f, dynamic_ncols=True)
+        yield t
+        t.close()
 
 
 @contextlib.contextmanager

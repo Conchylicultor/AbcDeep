@@ -25,6 +25,7 @@ import functools
 import tensorflow as tf
 
 import abcdeep
+from abcdeep.otherutils import tqdm_redirector
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.constant import GraphMode, GraphKey
 
@@ -166,8 +167,9 @@ class SaverHook(AbcHook):
         if not os.path.exists(self.state.model_dir):
             os.makedirs(self.state.model_dir, exist_ok=True)
         self.state.program._save_params()
-        self.saver.save(self.sess, self._get_model_prefix())  # Put a limit size (ex: 3GB for the model_dir) ?
-        print('Model saved.')
+        model_prefix = self._get_model_prefix()
+        self.saver.save(self.sess, model_prefix)  # Put a limit size (ex: 3GB for the model_dir) ?
+        print('Model saved: {}'.format(model_prefix))
 
     def _restore(self):
         pass
@@ -308,6 +310,8 @@ class TrainPlaceholderHook(AbcHook):
     def before_run(self, run_context):
         """
         """
+        # TODO: Control when test mode
+        return tf.train.SessionRunArgs(None, feed_dict={self.p_is_train: True})
 
     def after_run(self, run_context, run_values):
         """
@@ -316,15 +320,47 @@ class TrainPlaceholderHook(AbcHook):
 
 class GlobStepCounterHook(AbcHook):
     """ Increment the global step
+    Print a progression bar for each epoch
     """
+    def __init__(self):
+        """
+        """
+        super().__init__()
+
+        self.bar_gen = None  # Object manager which allows to restore the standard terminal output after using tqdm
+        self.bar = None
+        self.epoch_size = 0
+
+    def after_create_session(self, sess, coord):
+        """
+        """
+        self.bar_gen = tqdm_redirector()
+        self.bar = next(self.bar_gen)
+
+    def before_run(self, run_context):
+        """
+        """
+        # TODO: Communicate with data_loader to get the epoch size
+        # TODO: Close/recreate bar when finishing an epoch
+
     # TODO: Only called during training mode
     def after_run(self, run_context, run_values):
         self.state.glob_step += 1
+        self.bar.update(1)
+
+    def end(self, sess):
+        """
+        """
+        try:  # TODO: Bad code: replace tqdm_redirector() by better manager
+            next(self.bar_gen)
+        except StopIteration:
+            pass
 
 
 class PrintLossHook(AbcHook):
     """
     """
+
     def before_run(self, run_context):
         return tf.train.SessionRunArgs(
             fetches={GraphKey.LOSS: GraphKey.get_key(GraphKey.LOSS)}
@@ -344,6 +380,7 @@ class HyperParamSchedulerHook(AbcHook):
 
         self.name = name
         self.p_param = None
+        self.default = default
 
         # TODO: Improve function (more parameters, more choice, default
         # scheduler, different param for test,...)!
@@ -378,3 +415,8 @@ class HyperParamSchedulerHook(AbcHook):
         super()._init(state)
         self.p_param = tf.placeholder(tf.float32, shape=(), name=self.name)
         GraphKey.add_key(self.name, self.p_param)  # TODO: Better collision name handing (create custom methods ??)
+
+    def before_run(self, run_context):
+        """
+        """
+        return tf.train.SessionRunArgs(None, feed_dict={self.p_param: self.default})
