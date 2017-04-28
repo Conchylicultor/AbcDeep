@@ -24,6 +24,7 @@ import tensorflow as tf
 import abcdeep
 import abcdeep.hook as hook
 from abcdeep.constant import GraphKey
+from abcdeep.summary import SummaryHook
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.otherutils import cprint, TermMsg
 
@@ -149,8 +150,8 @@ class AbcProgram:
             # hook.HyperParamSchedulerHook(GraphKey.DROPOUT, 0.8),
             self.dataconnector_cls(),  # Then input connector
             self.model_cls(),  # Finally the main model
-            # hook.SummaryHook(),
             hook.SaverHook(),  # Saver has to be last one to modify graph (for the saving/init ops)
+            SummaryHook(),  # Summary is added after every summary have been added
             hook.GraphSummaryHook(),  # Summary is after the saver (because of reset)
             hook.GlobStepCounterHook(),  # glob step is called at the end
             hook.InterruptHook(),

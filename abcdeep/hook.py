@@ -267,7 +267,7 @@ class SaverHook(AbcHook):
 
 class GraphSummaryHook(AbcHook):
     """ Save the graph architecture for TensorBoard
-    Is only executed once at the first iteratio.
+    Is only executed once at the first iteration.
     """
 
     def _init(self, state):

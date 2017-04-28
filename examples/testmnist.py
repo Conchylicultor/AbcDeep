@@ -25,6 +25,7 @@ from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.abcprogram import AbcProgram
 from abcdeep.abcsubgraph import AbcModel, AbcDataConnector
 from abcdeep.constant import GraphMode, GraphKey
+from abcdeep.summary import SummaryKeys
 
 
 class MnistLoader(AbcDataConnector):
@@ -162,6 +163,7 @@ class Model(AbcModel):
                 # dim=-1,  # Don't exist for sparse_s...
             ))
 
+            SummaryKeys.add_scalar('loss', loss)
             GraphKey.add_key(GraphKey.LOSS, loss)
 
         # TODO: tf.summary.scalar('loss', self.loss)  # Keep track of the cost
