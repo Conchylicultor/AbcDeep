@@ -63,15 +63,6 @@ class DebugMode(abcdeep.OrderedAttr):
     FATAL = 'fatal'
 
 
-class AbortLoop(Exception):
-    """ Raised by the hooks to skip the current iteration
-    """
-
-
-class AbortProgram(Exception):
-    """ Raised by the hooks to end the program
-    """
-
 class AbcProgram:
 
     @staticmethod
@@ -207,6 +198,7 @@ class AbcProgram:
             h = hook._init(self.hook_state)
 
         print('Launching session...')
+        # The queue_runners are integrated at MonitoredSession
         with tf.train.MonitoredSession(
             session_creator=tf.train.ChiefSessionCreator(
                 scaffold=tf.train.Scaffold(),  # Scaffold.finalize will look at the collections to use the operators added by the hooks
@@ -220,10 +212,6 @@ class AbcProgram:
                 # TODO: Format output with tqdm (can probably be done using hook ?)
                 # TODO: Set current mode for the loop
                 sess.run([])  # Empty loop (the fetches are added by the hooks)
-                #except AbortLoop:  # Abort the current loop (ex: invalid input)
-                #    pass
-                #except AbortProgram:  # Abort program
-                #    sess.request_stop()
 
         print('The End! Thank you for using this program.')
 

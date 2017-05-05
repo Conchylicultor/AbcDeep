@@ -21,6 +21,7 @@ import tensorflow as tf
 import tensorflow.contrib.learn as learn
 
 import abcdeep
+import abcdeep.queue
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.abcprogram import AbcProgram
 from abcdeep.abcsubgraph import AbcModel, AbcDataConnector
@@ -36,9 +37,16 @@ class MnistLoader(AbcDataConnector):
     def model_args(parser):
         parser.add_argument('--img_size', type=int, default=28, help='Input size, height and width of the image')
 
+    @staticmethod
+    @ArgParser.regiser_args(ArgGroup.TRAINING)
+    def training_args(parser):
+        # TODO: Move batch_size declaration elsewhere ?
+        parser.add_argument('--batch_size', type=int, default=64, help='Batch size for a training/validation iteration')
+
     def _init(self, state):
         super()._init(state)
-        self._build_graph()
+        self._build_queue()
+        #self._build_graph()
 
     def _build_graph(self):
         # TODO: Use build_queue instead
@@ -59,6 +67,28 @@ class MnistLoader(AbcDataConnector):
         GraphKey.add_key(GraphKey.TARGET, p_target)
 
     def _build_queue(self):
+        # TODO: Does not seem possible to control the dataset saving location
+        mnist = learn.datasets.load_dataset('mnist')
+
+        img_size = self.state.args.img_size
+        batch_size = self.state.args.batch_size
+
+        t_image, t_target = tf.train.batch(
+            [mnist.train.images, mnist.train.labels],
+            batch_size=batch_size,
+            enqueue_many=True,
+        )
+
+        # TODO: Add data augmentation
+        # TODO: Use DataHook instead (avoid duplicating code if multiple queues ?)
+        t_image = tf.reshape(t_image, [-1,img_size,img_size,1])
+        t_target = tf.cast(t_target, tf.int32)
+
+        GraphKey.add_key(GraphKey.INPUT, t_image)
+        GraphKey.add_key(GraphKey.TARGET, t_target)
+
+
+    def _build_queue_proto(self):
         mnist = learn.datasets.load_dataset('mnist')
 
         inputs = abcdeep.queue.InputQueues()
@@ -91,13 +121,13 @@ class MnistLoader(AbcDataConnector):
 
         outputs = inputs.get_outputs()
 
-    def before_run(self, run_context):
-        """
-        """
-        return tf.train.SessionRunArgs(None, feed_dict={
-            GraphKey.get_key(GraphKey.INPUT): np.zeros((1,) + self.s_image4d[1:]),
-            GraphKey.get_key(GraphKey.TARGET): [0],
-        })
+    # def before_run(self, run_context):
+    #     """
+    #     """
+    #     return tf.train.SessionRunArgs(None, feed_dict={
+    #         GraphKey.get_key(GraphKey.INPUT): np.zeros((1,) + self.s_image4d[1:]),
+    #         GraphKey.get_key(GraphKey.TARGET): [0],
+    #     })
 
 
 class Model(AbcModel):

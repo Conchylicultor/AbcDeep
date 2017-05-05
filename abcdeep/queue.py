@@ -16,8 +16,10 @@
 """
 """
 
+import tensorflow as tf
 
-def create_queue(x, y):
+
+def create_queue(x, y, batch_size):
     """ Temporary function which create a queue from the given data
     Args:
         x: Input
@@ -26,6 +28,8 @@ def create_queue(x, y):
         (t_x, t_y): a tuple of tensor corresponding to the queue output
     """
     # TODO: Replace this function by more advanced/flexible queue
+    return tf.train.batch([x, y], batch_size)
+
 
 class InputQueues:
     pass

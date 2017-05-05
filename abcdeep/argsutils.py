@@ -78,6 +78,11 @@ class ArgParser:
         Args:
             cls: The class to parse
         """
+        # TODO: A common bug is when a function has declared two function with
+        # the same name and regiser_args. The second function erase the first
+        # one, thus one of the function is never registered to the parser.
+        # Is there a way to detect duplicates names within a class ?
+
         def gen_members(cls):  # Return also members in parent classes
             for c in reversed(cls.__mro__):  # TODO: If instance passed instead of class, also parse its non static methods
                 for v in vars(c):
