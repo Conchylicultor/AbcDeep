@@ -45,6 +45,16 @@ class ProgramInfo:
         self.version = version
 
 
+def print_title(text, size=64):
+    """ Print the given text with a better ascii formatting
+    """
+    print('#' * size)
+    print('#' + ' ' * (size - 2) + '#')
+    print('# {text:^{pad}} #'.format(text=text, pad=(size - 4)))
+    print('#' + ' ' * (size - 2) + '#')
+    print('#' * size)
+
+
 class DebugMode(abcdeep.OrderedAttr):
     INFO = 'info'
     DEBUG = 'debug'
@@ -130,7 +140,7 @@ class AbcProgram:
             args (List[str]): If None, will take the command line argument
         """
         # Global infos on the program
-        print('Welcome to {} v{} !'.format(
+        print_title('Welcome to {} v{} !'.format(
             self.program_info.name,
             self.program_info.version
         ))
@@ -190,6 +200,8 @@ class AbcProgram:
         # TODO: Single Hook which encapsulate and control all hooks (run for good mode,
         # for good iteration, forward parameters (glob_step,...)) ?
 
+        cprint('############### Initialization ###############', color=TermMsg.H1)
+
         print('Building graph...')
         for hook in self.hooks:
             h = hook._init(self.hook_state)
@@ -201,7 +213,8 @@ class AbcProgram:
             ),
             hooks=self.hooks
         ) as sess:
-            print('Session launched.')
+            # TODO: Correct additional line bug when printing whith both color and tqdm
+            cprint('############### Session launched ###############', color=TermMsg.H1)
 
             while not sess.should_stop():
                 # TODO: Format output with tqdm (can probably be done using hook ?)

@@ -230,14 +230,10 @@ class TermMsg:
     WARNING = TermColorMsg.TXT_BLACK + TermColorMsg.BG_YELLOW
 
 
-def cprint(*arg, color=None, **kwargs):
+def cprint(text, color=None, **kwargs):
     """ Print the given arguments with the given color
     """
     if color is None:
-        print(*arg, **kwargs)
+        print(text, **kwargs)
     else:
-        # end = kwargs.get('end', None)  # TODO: Allow to choose the end
-        print(color, end='')
-        print(*arg, **kwargs, end='')
-        print(TermColorMsg.END, end='')
-        print()
+        print(color + text + TermColorMsg.END, **kwargs)

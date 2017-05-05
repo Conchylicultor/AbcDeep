@@ -96,9 +96,12 @@ class AbcHook(tf.train.SessionRunHook):
         super().__init__()
         self.state = None  # Each hook share a common state object
 
-    def _init(self, state):
+    def _init(self, state, run_mode=None):
         """ Contructor of the hook
         This function is called after the arguments have been parsed
+        Args:
+            state (obj): the shared state of all the hooks
+            run_mode (obj): object controling when the hook is run (ex: only for test,...)
         """
         self.state = state
 

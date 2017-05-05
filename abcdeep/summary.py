@@ -44,6 +44,9 @@ class SummaryKeys:
     LOW = 'summary_low'
     # TODO: Some convenience method to easily capture the tf.layers summaries
     # ops
+    # TODO: Different summaries for the different queues (two different
+    # summary operators val and train for the images)
+    # TODO: Wrap summary under a unique 'summary' name scope ?
 
     def add_scalar(name, tensor, priority=None):
         if priority is None:
@@ -57,6 +60,8 @@ class SummaryHook(hook.AbcHook):
     # TODO: Record train/test into separate folders
     # TODO: Record images in separate folders (allows to remove them without
     # erasing the training curves)
+    # TODO: Add args parser to control the iterations for which the summary are
+    # run (compute_summary_train_every) ? Better to use default values ?
 
     def _init(self, state):
         super()._init(state)
