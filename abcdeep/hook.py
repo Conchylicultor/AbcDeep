@@ -364,13 +364,28 @@ class PrintLossHook(AbcHook):
     """
     """
 
+    def _init(self, state):
+        """
+        """
+        super()._init(state)
+        self.step = 50  # TODO: Replace by better global hook controler
+
+    def activated(self):
+        return self.state.glob_step % self.step == 0
+
     def before_run(self, run_context):
-        return tf.train.SessionRunArgs(
-            fetches={GraphKey.LOSS: GraphKey.get_key(GraphKey.LOSS)}
-        )
+        if self.activated():
+            return tf.train.SessionRunArgs(
+                fetches={GraphKey.LOSS: GraphKey.get_key(GraphKey.LOSS)}
+            )
 
     def after_run(self, run_context, run_values):
-        print('Loss (iter {}): {} ()')
+        if self.activated():
+            print('Loss at {iter}: {curr:.4f} (avg={avg:.4f})'.format(
+                iter=self.state.glob_step,
+                curr=run_values.results[GraphKey.LOSS],
+                avg=0.0,
+            ))
 
 
 class HyperParamSchedulerHook(AbcHook):

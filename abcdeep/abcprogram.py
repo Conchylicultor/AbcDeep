@@ -98,6 +98,51 @@ class AbcProgram:
         # can modify themselves aftewards (ex: when create_session is called)
         pass
 
+    #@abcdeep.abstract
+    def _get_all_hooks(self):
+        """ Define the hooks added to the session
+        Will call _get_hooks_before and _get_hooks_after to customize the added
+        hooks
+        This function can be overwritten to modify the default hooks.
+        Return:
+            List[Hook]: The list of all hooks
+        """
+        # WARNING: Calling order is important (TODO: Doc for each hook which define what should be run after/before)
+        return [
+            hook.TrainPlaceholderHook(),  # First hyperparameters
+            hook.HyperParamSchedulerHook(GraphKey.LEARNING_RATE, 0.001),
+            # hook.HyperParamSchedulerHook(GraphKey.DROPOUT, 0.8),
+            *self._get_hooks_before(),  # Custom hooks TODO: Use variable instead of function instead ?
+            self.dataconnector_cls(),  # Then input connector
+            self.model_cls(),  # Finally the main model
+            *self._get_hooks_after(),  # Custom hooks TODO: Remove ? Is _get_hooks_before enough ?
+            hook.PrintLossHook(),
+            hook.SaverHook(),  # Saver has to be last one to modify graph (for the saving/init ops)
+            SummaryHook(),  # Summary is added after every summary have been added
+            hook.GraphSummaryHook(),  # Summary is after the saver (because of reset)
+            hook.GlobStepCounterHook(),  # glob step is called at the end
+            hook.InterruptHook(),
+        ]
+
+    #@abcdeep.abstract
+    def _get_hooks_before(self):
+        """ Allows to add some hooks to the default ones
+        The hooks are added before the model is create so can be used to add
+        HyperParamSchedulerHook for instance
+        Return:
+            List[Hook]: A the hooks to add to the default ones
+        """
+        return []
+
+    #@abcdeep.abstract
+    def _get_hooks_after(self):
+        """ Allows to add some hooks to the default ones
+        The hooks are added after the data and model
+        Return:
+            List[Hook]: A the hooks to add to the default ones
+        """
+        return []
+
     def __init__(self, program_info, model=None, dataconnector=None):
         """
         Args:
@@ -143,20 +188,7 @@ class AbcProgram:
         ))
         print()
 
-        # TODO: HACK: Hardcoded values
-        # WARNING: Calling order is important (TODO: Doc for each hook which define what should be run after/before)
-        self.hooks = [
-            hook.TrainPlaceholderHook(),  # First hyperparameters
-            hook.HyperParamSchedulerHook(GraphKey.LEARNING_RATE, 0.001),
-            # hook.HyperParamSchedulerHook(GraphKey.DROPOUT, 0.8),
-            self.dataconnector_cls(),  # Then input connector
-            self.model_cls(),  # Finally the main model
-            hook.SaverHook(),  # Saver has to be last one to modify graph (for the saving/init ops)
-            SummaryHook(),  # Summary is added after every summary have been added
-            hook.GraphSummaryHook(),  # Summary is after the saver (because of reset)
-            hook.GlobStepCounterHook(),  # glob step is called at the end
-            hook.InterruptHook(),
-        ]
+        self.hooks = self._get_all_hooks()
 
         # Parse the command lines arguments
         self.arg_parser = ArgParser()

@@ -45,26 +45,29 @@ class MnistLoader(AbcDataConnector):
 
     def _init(self, state):
         super()._init(state)
-        self._build_queue()
-        #self._build_graph()
+        #self._build_queue()
+        self._build_graph()
 
     def _build_graph(self):
+        self.mnist = learn.datasets.load_dataset('mnist')
+
         # TODO: Use build_queue instead
         img_size = self.state.args.img_size
-        self.s_image4d = (None, img_size, img_size, 3)
 
-        p_image = tf.placeholder(
+        self.p_image = tf.placeholder(
             tf.float32,
-            shape=self.s_image4d,
+            shape=(None, img_size*img_size,),
             name='image',
         )
-        p_target = tf.placeholder(
+        t_image = tf.reshape(self.p_image, [-1,img_size,img_size,1])
+
+        self.p_target = tf.placeholder(
             tf.int32,
             shape=(None),
             name='target',
         )
-        GraphKey.add_key(GraphKey.INPUT, p_image)
-        GraphKey.add_key(GraphKey.TARGET, p_target)
+        GraphKey.add_key(GraphKey.INPUT, t_image)
+        GraphKey.add_key(GraphKey.TARGET, self.p_target)
 
     def _build_queue(self):
         # TODO: Does not seem possible to control the dataset saving location
@@ -121,13 +124,14 @@ class MnistLoader(AbcDataConnector):
 
         outputs = inputs.get_outputs()
 
-    # def before_run(self, run_context):
-    #     """
-    #     """
-    #     return tf.train.SessionRunArgs(None, feed_dict={
-    #         GraphKey.get_key(GraphKey.INPUT): np.zeros((1,) + self.s_image4d[1:]),
-    #         GraphKey.get_key(GraphKey.TARGET): [0],
-    #     })
+    def before_run(self, run_context):
+        """
+        """
+        images, targets = self.mnist.train.next_batch(self.state.args.batch_size)
+        return tf.train.SessionRunArgs(None, feed_dict={
+            self.p_image: images,
+            self.p_target: targets,
+        })
 
 
 class Model(AbcModel):
