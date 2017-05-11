@@ -25,6 +25,7 @@ import functools
 import tensorflow as tf
 
 import abcdeep
+import abcdeep.hookcontroller as hookcontroller
 from abcdeep.otherutils import tqdm_redirector
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.constant import GraphMode, GraphKey
@@ -96,14 +97,16 @@ class AbcHook(tf.train.SessionRunHook):
         super().__init__()
         self.state = None  # Each hook share a common state object
 
-    def _init(self, state, run_mode=None):
+    def _init(self, state, controller=None):
         """ Contructor of the hook
         This function is called after the arguments have been parsed
         Args:
             state (obj): the shared state of all the hooks
-            run_mode (obj): object controling when the hook is run (ex: only for test,...)
+            controller (obj): object controling when the hook is run (ex: only for test,...)
         """
         self.state = state
+        if controller:
+            controller.apply(self)
 
 
 class InterruptHook(AbcHook):
@@ -367,25 +370,20 @@ class PrintLossHook(AbcHook):
     def _init(self, state):
         """
         """
-        super()._init(state)
-        self.step = 50  # TODO: Replace by better global hook controler
-
-    def activated(self):
-        return self.state.glob_step % self.step == 0
+        # TODO: Avoid hardcoded step
+        super()._init(state, controller=hookcontroller.EveryXIterController(50))
 
     def before_run(self, run_context):
-        if self.activated():
-            return tf.train.SessionRunArgs(
-                fetches={GraphKey.LOSS: GraphKey.get_key(GraphKey.LOSS)}
-            )
+        return tf.train.SessionRunArgs(
+            fetches={GraphKey.LOSS: GraphKey.get_key(GraphKey.LOSS)}
+        )
 
     def after_run(self, run_context, run_values):
-        if self.activated():
-            print('Loss at {iter}: {curr:.4f} (avg={avg:.4f})'.format(
-                iter=self.state.glob_step,
-                curr=run_values.results[GraphKey.LOSS],
-                avg=0.0,
-            ))
+        print('Loss at {iter}: {curr:.4f} (avg={avg:.4f})'.format(
+            iter=self.state.glob_step,
+            curr=run_values.results[GraphKey.LOSS],
+            avg=0.0,
+        ))
 
 
 class HyperParamSchedulerHook(AbcHook):

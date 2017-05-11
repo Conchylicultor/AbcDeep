@@ -78,7 +78,7 @@ class AbcProgram:
     #@abcdeep.abstract
     def _customize_args(self, arg_parser):
         """ Allows child classes to customize the argument parser
-        Can overrite default arguments and add new custom ones. Is called after
+        Can overwrite default arguments and add new custom ones. Is called after
         having registered all standard arguments.
         Args:
             arg_parser (ArgParser): The program ArgParser object

@@ -14,6 +14,7 @@
 # ==============================================================================
 
 """ Other utilities. Contains:
+ * gen_attr: recursivelly generate the list of all attribute of a given object
  * tqdm_redirect: utility to redirect print to tqdm.write
  * interrupt_handler: Context manager to capture signal.SIGINT
  * OrderedAttr: keep track of the attribute declaration order in ._attr_values
@@ -21,13 +22,31 @@
 """
 
 import sys
-import signal
+import signal  # For capturing Ctrl+C
+import inspect  # To check if isclass
 import contextlib
 import collections
 import tqdm
 
 
-__all__ = ['tqdm_redirect', 'tqdm_redirector', 'interrupt_handler', 'OrderedAttr', 'cprint', 'TermMsg']
+__all__ = ['gen_attr', 'tqdm_redirect', 'tqdm_redirector', 'interrupt_handler', 'OrderedAttr', 'cprint', 'TermMsg']
+
+
+def gen_attr(obj):
+    """ Generate the list of all members of a class
+    Include those in parent classes
+    Args:
+        obj: class or instance
+    Return:
+        attr: yield all attribute values
+    """
+    isclass = inspect.isclass(obj)
+    cls = obj if isclass else type(obj)
+    base = () if isclass else (obj,)
+
+    for c in reversed(base + cls.__mro__):  # Reversed because top level classes need to be parsed first (for args order)
+        for v in vars(c):
+            yield getattr(obj, v)
 
 
 class TqdmFile:

@@ -83,12 +83,7 @@ class ArgParser:
         # one, thus one of the function is never registered to the parser.
         # Is there a way to detect duplicates names within a class ?
 
-        def gen_members(cls):  # Return also members in parent classes
-            for c in reversed(cls.__mro__):  # TODO: If instance passed instead of class, also parse its non static methods
-                for v in vars(c):
-                    yield v
-
-        for fct in [getattr(cls, v) for v in gen_members(cls)]:
+        for fct in otherutils.gen_attr(cls):
             if hasattr(fct, ArgParser.FCT_FLAG):
                 group_name = getattr(fct, ArgParser.FCT_FLAG)
                 # Create the group if not exist
