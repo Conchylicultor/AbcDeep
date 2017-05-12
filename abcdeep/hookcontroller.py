@@ -21,17 +21,6 @@ import functools
 import abcdeep.otherutils as otherutils
 
 
-class Overwrited:
-    """ Decorator for the overwritten function which call
-    """
-    def __init__(self, f):
-        self.f = f
-
-    def __call__(self, *args, **kwargs):
-        pass
-
-
-
 class HookController:
     """ Base Controller Class which determine when the hooks are triggered
     The class itself don't do anything but is meant to be subclassed
@@ -41,7 +30,7 @@ class HookController:
     @staticmethod
     def overwrite(f):
         """ Decorator which flag the function as overwriting the hook one
-        The functions have to be of the form
+        The functions flagged decorate the hook
         """
         setattr(f, HookController.FCT_FLAG, True)
         return f

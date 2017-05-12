@@ -15,6 +15,7 @@
 
 """ Other utilities. Contains:
  * gen_attr: recursivelly generate the list of all attribute of a given object
+ * iterify: Ecnapsulate a given object into a list
  * tqdm_redirect: utility to redirect print to tqdm.write
  * interrupt_handler: Context manager to capture signal.SIGINT
  * OrderedAttr: keep track of the attribute declaration order in ._attr_values
@@ -29,7 +30,16 @@ import collections
 import tqdm
 
 
-__all__ = ['gen_attr', 'tqdm_redirect', 'tqdm_redirector', 'interrupt_handler', 'OrderedAttr', 'cprint', 'TermMsg']
+__all__ = [
+    'gen_attr',
+    'iterify',
+    'tqdm_redirect',
+    'tqdm_redirector',
+    'interrupt_handler',
+    'OrderedAttr',
+    'cprint',
+    'TermMsg'
+]
 
 
 def gen_attr(obj):
@@ -47,6 +57,25 @@ def gen_attr(obj):
     for c in reversed(base + cls.__mro__):  # Reversed because top level classes need to be parsed first (for args order)
         for v in vars(c):
             yield getattr(obj, v)
+
+
+def iterify(obj):
+    """ Encapsulate object in an iterable (list) if necessary
+    Ex:
+        a = iterify(None)  # a = []
+        a = iterify(obj)  # a = [obj]
+        a = iterify([1, 2, 3])  # a = [1, 2, 3]
+
+    Args:
+        obj (List[T], None or T): Object to iterify
+    Return:
+        List[T]: The encapsulated object, empty list if obj is None
+    """
+    if obj is None:  # None -> []
+        obj = []
+    if not isinstance(obj, collections.Iterable):  # obj -> [obj]
+        obj = [obj]
+    return obj
 
 
 class TqdmFile:

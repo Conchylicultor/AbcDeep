@@ -22,11 +22,11 @@ The current hooks are:
 
 import os
 import functools
+import collections
 import tensorflow as tf
 
 import abcdeep
 import abcdeep.hookcontroller as hookcontroller
-from abcdeep.otherutils import tqdm_redirector
 from abcdeep.argsutils import ArgParser, ArgGroup
 from abcdeep.constant import GraphMode, GraphKey
 
@@ -97,16 +97,20 @@ class AbcHook(tf.train.SessionRunHook):
         super().__init__()
         self.state = None  # Each hook share a common state object
 
-    def _init(self, state, controller=None):
+    def _init(self, state, controllers=None):
         """ Contructor of the hook
         This function is called after the arguments have been parsed
         Args:
             state (obj): the shared state of all the hooks
-            controller (obj): object controling when the hook is run (ex: only for test,...)
+            controller (HookController or List[HookController]): object
+                controling when the hook is run (ex: only for test,...). If
+                multiples controllers are given, they are apply in the order
+                they are added
         """
         self.state = state
-        if controller:
-            controller.apply(self)
+
+        for c in abcdeep.iterify(controllers):
+            c.apply(self)
 
 
 class InterruptHook(AbcHook):
@@ -340,7 +344,7 @@ class GlobStepCounterHook(AbcHook):
     def after_create_session(self, sess, coord):
         """
         """
-        self.bar_gen = tqdm_redirector()
+        self.bar_gen = abcdeep.tqdm_redirector()
         self.bar = next(self.bar_gen)
 
     def before_run(self, run_context):
@@ -371,7 +375,7 @@ class PrintLossHook(AbcHook):
         """
         """
         # TODO: Avoid hardcoded step
-        super()._init(state, controller=hookcontroller.EveryXIterController(50))
+        super()._init(state, controllers=hookcontroller.EveryXIterController(50))
 
     def before_run(self, run_context):
         return tf.train.SessionRunArgs(
