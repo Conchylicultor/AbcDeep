@@ -109,7 +109,7 @@ class AbcProgram:
         """
         # WARNING: Calling order is important (TODO: Doc for each hook which define what should be run after/before)
         return [
-            hook.TrainPlaceholderHook(),  # First hyperparameters
+            hook.ModeSelectorHook(),  # First hyperparameters
             hook.HyperParamSchedulerHook(GraphKey.LEARNING_RATE, 0.001),
             # hook.HyperParamSchedulerHook(GraphKey.DROPOUT, 0.8),
             *self._get_hooks_before(),  # Custom hooks TODO: Use variable instead of function instead ?

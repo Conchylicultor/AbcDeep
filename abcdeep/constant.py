@@ -16,10 +16,12 @@
 """ Define standard constants and parameters to define the graphs
 """
 
+import abcdeep
+
 # TODO: Move GraphKey to subgraph.py or rename constant.py => ... (Choose better name)
 
 
-class GraphMode:
+class GraphMode(abcdeep.OrderedAttr):
     """ Define the usual modes for the model
     Can be used at multiple places: At graph construction, at graph inference,
     for the data loader,...

@@ -144,18 +144,10 @@ class Model(AbcModel):
 
     def _init(self, state):
         super()._init(state)
-        #self._build_temp()
+
         self._build_network()
         self._build_loss()
         self._build_optimizer()  # TODO: Only build if not training
-
-    def _build_temp(self):  # TODO: Delete
-        out_size = self.state.args.nb_class
-        net = GraphKey.get_key(GraphKey.INPUT)
-        W = tf.Variable(tf.truncated_normal([12, out_size], dtype=tf.float32))
-        b = tf.Variable(tf.zeros([out_size], dtype=tf.float32))
-        net = b
-        GraphKey.add_key(GraphKey.OUTPUT, net)
 
 
     def _build_network(self):

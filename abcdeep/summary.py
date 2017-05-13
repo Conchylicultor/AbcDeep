@@ -34,6 +34,7 @@ import os
 import tensorflow as tf
 
 import abcdeep.hook as hook
+from abcdeep.constant import GraphMode
 
 
 class SummaryKeys:
@@ -98,8 +99,16 @@ class SummaryHook(hook.AbcHook):
     def after_run(self, run_context, run_values):
         """
         """
+        if self.state.curr_mode == GraphMode.TRAIN:
+            curr_summary = self.summary_train
+        elif self.state.curr_mode == GraphMode.VAL:
+            curr_summary = self.summary_val
+        # TODO: How to handle different tests modes ?
+        #elif self.state.curr_mode == GraphMode.TEST:
+        #    curr_summary = self.summary_test
+
         # TODO: Control when test mode
-        self.summary_train.add_summary(
+        curr_summary.add_summary(
             run_values.results[self.SUMMARY_OP],
             self.state.glob_step
         )

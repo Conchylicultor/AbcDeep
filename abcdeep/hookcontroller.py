@@ -59,12 +59,41 @@ class HookController:
                 setattr(self.fct, name, fct_hook)
 
 
-class EveryXIterController(HookController):
-    def __init__(self, num_step):
-        super().__init__()
-        self.num_step = num_step
+class OnlyModeController(HookController):
+    """
+    Only trigger for the given modes
+    """
+    def __init__(self, modes=None):
+        self.modes = abcdeep.iterify(modes, default=TODO)
 
     def activated(self):
+        return self.state.curr_mode in self.modes
+
+    @HookController.overwrite
+    def before_run(self, *args, **kwargs):
+        if self.activated():
+            return self.fct.before_run(*args, **kwargs)
+
+    @HookController.overwrite
+    def after_run(self, *args, **kwargs):
+        if self.activated():
+            return self.fct.after_run(*args, **kwargs)
+
+
+class EveryXIterController(HookController):
+    def __init__(self, num_step, at_first=True):
+        """
+        Args:
+            num_step (int):
+            at_first (bool): True if save at first iteration
+        """
+        super().__init__()
+        self.num_step = num_step
+        self.at_first = at_first
+
+    def activated(self):
+        if not self.at_first and self.state.glob_step == 0:
+            return False
         return self.state.glob_step % self.num_step == 0
 
     @HookController.overwrite

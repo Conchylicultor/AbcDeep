@@ -113,6 +113,47 @@ class AbcHook(tf.train.SessionRunHook):
             c.apply(self)
 
 
+class ModeSelectorHook(AbcHook):
+    """ Select the run mode among predetermined ones
+    """
+    def __init__(self, modes=None, policy=None):
+        """
+        Args:
+            modes (List[str]): the list of modes. If None, use the default
+                modes (train, val and test)
+            policy (obj): The mode contoller (ex: run 1 validation iteration
+                every 10 training iterations and run complete testing set every
+                1000 iterations)
+        """
+        super().__init__()
+        self.modes = modes or GraphMode._attr_values
+        self.p_choices = {}
+
+    def _init(self, state):
+        super()._init(state)
+        self.state.curr_mode = self.modes[0]
+
+        # Build the modes
+        with tf.name_scope('mode_choice'):
+            for m in self.modes:
+                self.p_choices[m] = tf.placeholder_with_default(
+                    False,
+                    shape=(),
+                    name='mode_{}'.format(m)
+                )
+
+        t_is_train = tf.identity(self.p_choices[GraphMode.TRAIN], name='is_train')
+        GraphKey.add_key(GraphKey.IS_TRAIN, t_is_train)
+
+    def before_run(self, run_context):
+        """
+        """
+        # TODO: Control when test mode
+        return tf.train.SessionRunArgs(None, feed_dict={
+            self.p_choices[self.state.curr_mode]: True
+        })
+
+
 class InterruptHook(AbcHook):
     """ Stop the session when a SIGINT is captured
     """
@@ -161,7 +202,13 @@ class SaverHook(AbcHook):
         parser.add_argument('--keep_every', type=float, default=0.3, help='if this option is set, a saved model will be keep every x hours (can be a fraction) (Warning: make sure you have enough free disk space or increase save_every)')
 
     def _init(self, state):
-        super()._init(state)
+        super()._init(
+            state,
+            controllers=hookcontroller.EveryXIterController(
+                state.args.save_every,
+                at_first=False,
+            )
+        )
         self.sess = None
 
         self.saver = None
@@ -268,6 +315,7 @@ class SaverHook(AbcHook):
     def after_run(self, run_context, run_values):
         """ Eventually save the model (every X iterations)
         """
+        self._save()
 
     def end(self, sess):
         """ If training mode, perform an ultimate saving
@@ -307,25 +355,6 @@ class GraphSummaryHook(AbcHook):
             )
             self.summary.add_graph(sess.graph)
             # Also use .add_meta_graph ?? What difference ???
-
-
-class TrainPlaceholderHook(AbcHook):
-    """ Switch for the train/test mode
-    """
-    def _init(self, state):
-        super()._init(state)
-        self.p_is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
-        GraphKey.add_key(GraphKey.IS_TRAIN, self.p_is_train)
-
-    def before_run(self, run_context):
-        """
-        """
-        # TODO: Control when test mode
-        return tf.train.SessionRunArgs(None, feed_dict={self.p_is_train: True})
-
-    def after_run(self, run_context, run_values):
-        """
-        """
 
 
 class GlobStepCounterHook(AbcHook):

@@ -183,7 +183,7 @@ class OrderedAttrMeta(type):
 
 
 class OrderedAttr(metaclass=OrderedAttrMeta):
-    """ Convinience class to hide the metaclass
+    """ Convenience class to hide the metaclass
     """
     def __setattr__(self, name, value):  # TODO: Useless ? Should also update when delete
         """ Called when a new attribute is added.
