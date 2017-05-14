@@ -128,6 +128,7 @@ class ModeSelectorHook(AbcHook):
         super().__init__()
         self.modes = modes or GraphMode._attr_values
         self.p_choices = {}
+        self.policy = policy or hookcontroller.AlternatePolicy()  # TODO: hookcontroller.DefaultPolicy()
 
     def _init(self, state):
         super()._init(state)
@@ -148,6 +149,8 @@ class ModeSelectorHook(AbcHook):
     def before_run(self, run_context):
         """
         """
+        self.state.curr_mode = self.policy.run(self.state)
+
         # TODO: Control when test mode
         return tf.train.SessionRunArgs(None, feed_dict={
             self.p_choices[self.state.curr_mode]: True
@@ -204,10 +207,13 @@ class SaverHook(AbcHook):
     def _init(self, state):
         super()._init(
             state,
-            controllers=hookcontroller.EveryXIterController(
-                state.args.save_every,
-                at_first=False,
-            )
+            controllers=[
+                hookcontroller.OnlyModeController(),
+                hookcontroller.EveryXIterController(
+                    state.args.save_every,
+                    at_first=False,
+                ),
+            ]
         )
         self.sess = None
 
@@ -370,6 +376,12 @@ class GlobStepCounterHook(AbcHook):
         self.bar = None
         self.epoch_size = 0
 
+    def _init(self, state):
+        super()._init(
+            state,
+            controllers=hookcontroller.OnlyModeController()
+        )
+
     def after_create_session(self, sess, coord):
         """
         """
@@ -404,7 +416,10 @@ class PrintLossHook(AbcHook):
         """
         """
         # TODO: Avoid hardcoded step
-        super()._init(state, controllers=hookcontroller.EveryXIterController(50))
+        super()._init(state, controllers=[
+            hookcontroller.OnlyModeController(),
+            hookcontroller.EveryXIterController(50)]
+        )
 
     def before_run(self, run_context):
         return tf.train.SessionRunArgs(
@@ -425,6 +440,7 @@ class HyperParamSchedulerHook(AbcHook):
     def __init__(self, name, default):
         """
         """
+        # TODO: Allow special variable for test mode (ex: set dropout at 1.0)
         super().__init__()
 
         self.name = name

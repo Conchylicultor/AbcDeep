@@ -59,7 +59,7 @@ def gen_attr(obj):
             yield getattr(obj, v)
 
 
-def iterify(obj):
+def iterify(obj, default=None):
     """ Encapsulate object in an iterable (list) if necessary
     Ex:
         a = iterify(None)  # a = []
@@ -68,11 +68,12 @@ def iterify(obj):
 
     Args:
         obj (List[T], None or T): Object to iterify
+        default: Is used if not None and obj is None,
     Return:
         List[T]: The encapsulated object, empty list if obj is None
     """
     if obj is None:  # None -> []
-        obj = []
+        obj = default if default is not None else []
     if not isinstance(obj, collections.Iterable):  # obj -> [obj]
         obj = [obj]
     return obj

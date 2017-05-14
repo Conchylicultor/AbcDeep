@@ -241,6 +241,7 @@ class AbcProgram:
             cprint('############### Session launched ###############', color=TermMsg.H1)
 
             while not sess.should_stop():
+                # TODO: Be careful with Batch-norm that the correct variables are added to dependencies
                 # TODO: Format output with tqdm (can probably be done using hook ?)
                 # TODO: Set current mode for the loop
                 sess.run([])  # Empty loop (the fetches are added by the hooks)

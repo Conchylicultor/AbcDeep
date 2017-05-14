@@ -34,6 +34,7 @@ import os
 import tensorflow as tf
 
 import abcdeep.hook as hook
+import abcdeep.hookcontroller as hookcontroller
 from abcdeep.constant import GraphMode
 
 
@@ -64,7 +65,9 @@ class SummaryHook(hook.AbcHook):
     # TODO: Add args parser to control the iterations for which the summary are
     # run (compute_summary_train_every) ? Better to use default values ?
 
-    def _init(self, state):
+    def _init(self, state, controllers=hookcontroller.OnlyModeController(
+        [GraphMode.TRAIN, GraphMode.VAL]  # No GraphMode.TEST
+    )):
         super()._init(state)
         self.summary_train = None
         self.summary_val = None

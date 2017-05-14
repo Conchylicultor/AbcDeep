@@ -18,7 +18,9 @@
 
 import functools
 
+import abcdeep
 import abcdeep.otherutils as otherutils
+from abcdeep.constant import GraphMode
 
 
 class HookController:
@@ -64,7 +66,8 @@ class OnlyModeController(HookController):
     Only trigger for the given modes
     """
     def __init__(self, modes=None):
-        self.modes = abcdeep.iterify(modes, default=TODO)
+        super().__init__()
+        self.modes = abcdeep.iterify(modes, default=[GraphMode.TRAIN])
 
     def activated(self):
         return self.state.curr_mode in self.modes
@@ -105,3 +108,37 @@ class EveryXIterController(HookController):
     def after_run(self, *args, **kwargs):
         if self.activated():
             return self.fct.after_run(*args, **kwargs)
+
+
+class DefaultPolicy:
+    """ Only train
+    """
+    def run(self, state):
+        return GraphMode.TRAIN
+
+
+class AlternatePolicy:
+    """ Run train and val simultaneously
+    """
+    # TODO: Loss print once both train and test
+    # TODO: Be carefull that hooks which use some val_every variable are run even if not
+    # synchronous with AlternatePolicy.VAL_EVERY (ex: summary record val every 13 iter and
+    # AlternatePolicy switch val mode every 10 iter)
+    # TODO: Only when train mode is the optimizer step run (.forward() and .backward())
+    # TODO: Summary train/test
+    def __init__(self):
+        self.prev = False  # Avoid running val twice at the same iteration
+        self.VAL_EVERY = 10  # TODO: Avoid hardcoded value ?
+
+        self.gen_next = None
+
+    def run(self, state):
+        def next_mode():
+            while True:
+                if state.glob_step % self.VAL_EVERY == 0:
+                    yield GraphMode.VAL
+                yield GraphMode.TRAIN
+
+        if self.gen_next is None:
+            self.gen_next = next_mode()
+        return next(self.gen_next)
